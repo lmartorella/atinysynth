@@ -1,7 +1,7 @@
 CROSS_COMPILE ?=
 
 CFLAGS ?= -g -Werror -Woverflow
-CPPFLAGS ?= -I$(SRCDIR) -I$(PORTDIR)
+CPPFLAGS ?= -I$(SRCDIR) -I$(PORTDIR) -DSYNTH_CFG=\"poly_cfg.h\"
 LDFLAGS ?= -g -lao -lm -Wl,--as-needed
 LIBS += -lao -lm
 INCLUDES += -I$(SRCDIR) -I$(PORTDIR)

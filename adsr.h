@@ -56,11 +56,11 @@
 #define ADSR_INFINITE			UINT8_MAX
 
 /*!
- * ADSR Envelope Generator definition.  11 bytes.
+ * ADSR Envelope Generator definition.
  */
 struct adsr_env_def_t {
-	/*! Time scale, samples per unit */
-	uint32_t time_scale;
+	/*! Time scale, samples per unit. */
+	TIME_SCALE_T time_scale;
 	/*! Delay period, time units.  UINT8_MAX = infinite */
 	uint8_t delay_time;
 	/*! Attack period, time units */
@@ -78,15 +78,15 @@ struct adsr_env_def_t {
 };
 
 /*!
- * ADSR Envelope Generator data.  20 bytes.
+ * ADSR Envelope Generator data. 
  */
 struct adsr_env_gen_t {
 	/*! Definition */
 	struct adsr_env_def_t def;
-	/*! Time to next event, samples.  UINT32_MAX = infinite */
-	uint32_t next_event;
+	/*! Time to next event, samples.  TIME_SCALE_MAX = infinite */
+	TIME_SCALE_T next_event;
 	/*! Time step, samples */
-	uint16_t time_step;
+	TIME_SCALE_T time_step;
 	/*! ADSR state */
 	uint8_t state;
 	/*! ADSR counter */
@@ -143,7 +143,7 @@ static inline uint8_t adsr_is_done(struct adsr_env_gen_t* const adsr) {
  * Test to see if the ADSR is awaiting a trigger.
  */
 static inline uint8_t adsr_is_waiting(struct adsr_env_gen_t* const adsr) {
-	return ((adsr->next_event == UINT32_MAX)
+	return ((adsr->next_event == TIME_SCALE_MAX)
 			&& ((adsr->state == ADSR_STATE_DELAY_EXPIRE)
 				|| (adsr->state == ADSR_STATE_SUSTAIN_EXPIRE)));
 }

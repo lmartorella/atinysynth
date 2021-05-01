@@ -30,14 +30,14 @@
 
 /*!
  * Helper macro, returns the time in samples if the number of
- * time units ≠ UINT8_MAX (infinite), otherwise it returns
- * UINT32_MAX.
+ * time units != ADSR_INFINITE (infinite), otherwise it returns
+ * TIME_SCALE_MAX.
  */
-static inline uint32_t adsr_num_samples(uint32_t scale, uint8_t units) {
+static inline TIME_SCALE_T adsr_num_samples(TIME_SCALE_T scale, uint8_t units) {
 	if (units != ADSR_INFINITE)
 		return scale * units;
 	else
-		return UINT32_MAX;
+		return TIME_SCALE_MAX;
 }
 
 /*!
@@ -64,7 +64,7 @@ static uint8_t adsr_release_amp(uint8_t amp, uint8_t count) {
 uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
 	if (adsr->next_event) {
 		/* Still waiting for next event */
-		if (adsr->next_event != UINT32_MAX)
+		if (adsr->next_event != TIME_SCALE_MAX)
 			adsr->next_event--;
 		_DPRINTF("adsr=%p amp=%d next_in=%d\n",
 				adsr, adsr->amplitude, adsr->next_event);
@@ -141,7 +141,7 @@ uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
 
 	if (adsr->state == ADSR_STATE_ATTACK_INIT) {
 		/* Attack is divided into 16 segments */
-		adsr->time_step = (uint16_t)((adsr->def.attack_time
+		adsr->time_step = (TIME_SCALE_T)((adsr->def.attack_time
 				* adsr->def.time_scale) >> 4);
 		adsr->counter = 16;
 		adsr->next_event = adsr->time_step;
@@ -189,7 +189,7 @@ uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
 		/* We should be at full amplitude */
 		adsr->amplitude = adsr->def.peak_amp;
 
-		adsr->time_step = (uint16_t)((adsr->def.decay_time
+		adsr->time_step = (TIME_SCALE_T)((adsr->def.decay_time
 					* adsr->def.time_scale) >> 4);
 		adsr->counter = 16;
 		adsr->next_event = adsr->time_step;
@@ -246,7 +246,7 @@ uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
 	if (adsr->state == ADSR_STATE_RELEASE_INIT) {
 		_DPRINTF("adsr=%p RELEASE INIT\n", adsr);
 
-		adsr->time_step = (uint16_t)((adsr->def.release_time
+		adsr->time_step = (TIME_SCALE_T)((adsr->def.release_time
 					* adsr->def.time_scale) >> 4);
 		adsr->counter = 16;
 		adsr->next_event = adsr->time_step;

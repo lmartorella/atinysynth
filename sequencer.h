@@ -27,7 +27,6 @@
 /*! 
  * Define a single step/frame of the sequencer. It applies to the active channel.
  * Contains the definition of the next waveform and envelope.
- * 16 bytes
  */
 struct seq_frame_t {
 	/*! Envelope definition */
@@ -39,6 +38,8 @@ struct seq_frame_t {
 struct seq_stream_header_t {
 	/*! Sampling frequency required for correct timing */
 	uint16_t synth_frequency;
+	/*! Size of a single frame in bytes */
+	uint8_t frame_size;
 	/*! Number of voices. They will all be enabled */
 	uint8_t voices;
 	/*! Total frame count */

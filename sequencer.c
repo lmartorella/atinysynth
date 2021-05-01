@@ -124,6 +124,10 @@ int seq_play_stream(const struct seq_stream_header_t* stream_header, uint8_t _vo
 		_DPRINTF("Mismatching sampling frequency");
 		return 1;
 	}
+    if (stream_header->frame_size != sizeof(struct seq_frame_t)) {
+        _DPRINTF("Mismatching frame size");
+        return 1;
+    }
 
 	frame_count = stream_header->frames;
 	voice_count = stream_header->voices;

@@ -100,6 +100,7 @@ static int open_mml(const char* name) {
 		fprintf(stderr, "Cannot write the sequencer.bin file\n");
 		return 1;
 	}
+	seq_stream_header.frame_size = sizeof(struct seq_frame_t);
 	seq_stream_header.synth_frequency = synth_freq;
 	seq_stream_header.frames = frame_count;
 	seq_stream_header.voices = voice_count;

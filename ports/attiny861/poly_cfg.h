@@ -23,4 +23,10 @@
 
 #define SYNTH_FREQ		(8000)
 
+/*! Type for time scale, samples per unit. 
+ * 16 bits would allow 2^24 samples of maximum note duration and a total duration of 255 time unit.
+ * This means ~2000 seconds on 8Khz.
+ */
+#define TIME_SCALE_T    uint16_t
+
 #endif
