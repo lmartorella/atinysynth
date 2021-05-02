@@ -33,6 +33,7 @@ struct voice_wf_gen_t {
 			/*! Amplitude sample */
 			int8_t int_amplitude;
 		};
+#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE)
 		// For linear gen and noise, use 16-bit fixed-point + amplitude step
 		struct {
 			/*! Waveform output sample in fixed-point */
@@ -42,6 +43,7 @@ struct voice_wf_gen_t {
 			/*! Amplitude step for TRIANGLE and SAWTOOTH */
 			int16_t fp_step;
 		};
+#endif
 	};
 	/*! Samples to next waveform period (12.4 fixed point) */
 	uint16_t period_remain;
@@ -88,11 +90,13 @@ void voice_wf_set_dc(struct voice_wf_gen_t* const wf_gen,
 void voice_wf_set_square(struct voice_wf_gen_t* const wf_gen,
 		uint16_t freq, int8_t amplitude);
 
+#ifdef USE_SAWTOOTH
 /*!
  * Configure the generator for sawtooth wave synthesis.
  */
 void voice_wf_set_sawtooth(struct voice_wf_gen_t* const wf_gen,
 		uint16_t freq, int8_t amplitude);
+#endif
 
 /*!
  * Configure the generator for sawtooth wave synthesis.

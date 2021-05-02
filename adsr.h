@@ -49,6 +49,8 @@
 #define ADSR_STATE_RELEASE_EXPIRE	(0x5f)
 #define ADSR_STATE_DONE			(0xff)
 
+#include "poly_cfg.h"
+
 /*!
  * Hold this state until `adsr_continue` is called.  Valid for
  * `delay_time` and `sustain_time` only.
@@ -122,10 +124,7 @@ static inline void adsr_reset(struct adsr_env_gen_t* const adsr) {
 /*!
  * Configure the ADSR.
  */
-static inline void adsr_config(struct adsr_env_gen_t* const adsr, struct adsr_env_def_t* const def) {
-	adsr->def = *def;
-	adsr_reset(adsr);
-}
+void adsr_config(struct adsr_env_gen_t* const adsr, struct adsr_env_def_t* const def);
 
 /*!
  * Compute the ADSR amplitude

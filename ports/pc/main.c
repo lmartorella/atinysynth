@@ -234,14 +234,18 @@ int main(int argc, char** argv) {
 			voice_wf_set_dc(&poly_voice[voice].wf, amp);
 			argv++;
 			argc--;
-		} else if (!strcmp(argv[0], "noise")) {
+		} 
+#ifdef USE_NOISE
+		else if (!strcmp(argv[0], "noise")) {
 			int amp = atoi(argv[1]);
 			_DPRINTF("channel %d mode NOISE amp=%d\n",
 					voice, amp);
 			voice_wf_set_noise(&poly_voice[voice].wf, amp);
 			argv++;
 			argc--;
-		} else if (!strcmp(argv[0], "square")) {
+		} 
+#endif
+		else if (!strcmp(argv[0], "square")) {
 			int freq = atoi(argv[1]);
 			int amp = atoi(argv[2]);
 			_DPRINTF("channel %d mode SQUARE freq=%d amp=%d\n",
@@ -250,7 +254,9 @@ int main(int argc, char** argv) {
 					freq, amp);
 			argv += 2;
 			argc -= 2;
-		} else if (!strcmp(argv[0], "sawtooth")) {
+		} 
+#ifdef USE_SAWTOOTH
+		else if (!strcmp(argv[0], "sawtooth")) {
 			int freq = atoi(argv[1]);
 			int amp = atoi(argv[2]);
 			_DPRINTF("channel %d mode SAWTOOTH freq=%d amp=%d\n",
@@ -259,7 +265,10 @@ int main(int argc, char** argv) {
 					freq, amp);
 			argv += 2;
 			argc -= 2;
-		} else if (!strcmp(argv[0], "triangle")) {
+		} 
+#endif
+#ifdef USE_TRIANGLE
+		else if (!strcmp(argv[0], "triangle")) {
 			int freq = atoi(argv[1]);
 			int amp = atoi(argv[2]);
 			_DPRINTF("channel %d mode TRIANGLE freq=%d amp=%d\n",
@@ -268,9 +277,11 @@ int main(int argc, char** argv) {
 					freq, amp);
 			argv += 2;
 			argc -= 2;
+		} 
+#endif
 
 		/* ADSR options */
-		} else if (!strcmp(argv[0], "scale")) {
+		else if (!strcmp(argv[0], "scale")) {
 			int scale = atoi(argv[1]);
 			_DPRINTF("channel %d ADSR scale %d samples\n",
 					voice, scale);

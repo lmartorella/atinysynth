@@ -29,6 +29,14 @@
 #define ADSR_LIN_AMP_FACTOR	(5)
 
 /*!
+ * Configure the ADSR.
+ */
+void adsr_config(struct adsr_env_gen_t* const adsr, struct adsr_env_def_t* const def) {
+	adsr->def = *def;
+	adsr_reset(adsr);
+}
+
+/*!
  * Helper macro, returns the time in samples if the number of
  * time units != ADSR_INFINITE (infinite), otherwise it returns
  * TIME_SCALE_MAX.
