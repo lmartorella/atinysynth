@@ -9,11 +9,9 @@
 #include "synth.h"
 #include "sequencer.h"
 
-static struct voice_ch_t poly_voice[2];
 static struct poly_synth_t synth;
 
 void main(void) {
-    synth.voice = poly_voice;
     struct seq_stream_header_t seq_stream_header;
     seq_play_stream(&seq_stream_header, 4, &synth);
 

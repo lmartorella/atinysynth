@@ -36,8 +36,13 @@ extern const uint16_t __attribute__((weak)) synth_freq;
  * Polyphonic synthesizer structure
  */
 struct poly_synth_t {
+#ifdef VOICE_COUNT
+	/*! Pointer to voices.  There may be up to 16 voices referenced. */
+	struct voice_ch_t voice[VOICE_COUNT];
+#else
 	/*! Pointer to voices.  There may be up to 16 voices referenced. */
 	struct voice_ch_t* voice;
+#endif
 	/*!
 	 * Bit-field enabling given voices.  This allows selective turning
 	 * on and off of given voice channels.  If the corresponding bit is
@@ -46,7 +51,8 @@ struct poly_synth_t {
 	 * Note no bounds checking is done, if you have only defined 4
 	 * channels, then only set bits 0-3, don't set bits 4 onwards here.
 	 */
-	volatile uintptr_t enable;
+	volatile CHANNEL_MASK_T enable;
+#ifdef SUPPORT_MUTE
 	/*!
 	 * Bit-field muting given voices.  This allows for selective adding
 	 * of voices to the overall output.  If a field is 1, then that voice
@@ -54,6 +60,7 @@ struct poly_synth_t {
 	 * not included.)
 	 */
 	volatile uintptr_t mute;
+#endif
 };
 
 /*!
@@ -61,7 +68,7 @@ struct poly_synth_t {
  */
 static inline int8_t poly_synth_next(struct poly_synth_t* const synth) {
 	int16_t sample = 0;
-	uintptr_t mask = 1;
+	CHANNEL_MASK_T mask = 1;
 	uint8_t idx = 0;
 
 	while (mask) {
@@ -71,8 +78,10 @@ static inline int8_t poly_synth_next(struct poly_synth_t* const synth) {
 					&(synth->voice[idx]));
 			_DPRINTF("poly %p ch=%d out=%d\n",
 					synth, idx, ch_sample);
+#ifdef SUPPORT_MUTE
 			if (!(synth->mute & mask))
 				sample += ch_sample;
+#endif
 			if (voice_ch_is_done(&synth->voice[idx])) {
 				_DPRINTF("poly %p ch=%d done\n", synth, idx);
 				synth->enable &= ~mask;
