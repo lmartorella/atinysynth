@@ -25,10 +25,24 @@
  * Waveform generator state.  12 bytes.
  */
 struct voice_wf_gen_t {
-	/*! Waveform output sample in fixed-point */
-	int16_t sample;
-	/*! Amplitude sample in fixed point */
-	int16_t amplitude;
+	union {
+		// For square gen, 8-bit sample is enough
+		struct {
+			/*! Waveform output sample */
+			int8_t int_sample;
+			/*! Amplitude sample */
+			int8_t int_amplitude;
+		};
+		// For linear gen and noise, use 16-bit fixed-point + amplitude step
+		struct {
+			/*! Waveform output sample in fixed-point */
+			int16_t fp_sample;
+			/*! Amplitude sample in fixed point */
+			int16_t fp_amplitude;
+			/*! Amplitude step for TRIANGLE and SAWTOOTH */
+			int16_t fp_step;
+		};
+	};
 	/*! Samples to next waveform period (12.4 fixed point) */
 	uint16_t period_remain;
 	/*!
@@ -36,9 +50,6 @@ struct voice_wf_gen_t {
 	 * (Half period for SQUARE and TRIANGLE)
 	 */
 	uint16_t period;
-	/*! Amplitude step for TRIANGLE and SAWTOOTH */
-	int16_t step;
-	uint8_t reserved;
 	/*! Waveform generation mode */
 	uint8_t mode;
 };
