@@ -94,7 +94,9 @@ void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream,
  	struct poly_synth_t synth;
 	struct voice_ch_t* poly_voice = malloc(sizeof(struct voice_ch_t) * valid_channel_count);
 	synth.voice = poly_voice;
+#ifdef SUPPORT_MUTE
 	synth.mute = 0;
+#endif
 	synth.enable = 0;
 
 	struct compiler_state_t state;

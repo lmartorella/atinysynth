@@ -33,6 +33,9 @@
 #undef USE_SAWTOOTH
 #undef USE_TRIANGLE
 #undef USE_NOISE
+#undef USE_DC
+
+#undef SUPPORT_MUTE
 
 #define ADSR_FIXED_DELAY 0
 #define ADSR_FIXED_ATTACK 12

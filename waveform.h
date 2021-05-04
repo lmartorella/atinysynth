@@ -52,23 +52,35 @@ struct voice_wf_gen_t {
 	 * (Half period for SQUARE and TRIANGLE)
 	 */
 	uint16_t period;
+#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_NOISE) || defined(USE_DC)
 	/*! Waveform generation mode */
 	uint8_t mode;
+#endif
 };
 
 /* Waveform generation modes */
+#ifdef USE_DC
 #define VOICE_MODE_DC		(0)
+#endif
 #define	VOICE_MODE_SQUARE	(1)
+#ifdef USE_SAWTOOTH
 #define VOICE_MODE_SAWTOOTH	(2)
+#endif
+#ifdef USE_TRIANGLE
 #define VOICE_MODE_TRIANGLE	(3)
+#endif
+#ifdef USE_NOISE
 #define VOICE_MODE_NOISE	(4)
+#endif
 
 /**
  * The Waveform definition. 4 bytes.
  */ 
 struct voice_wf_def_t {
+#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_NOISE) || defined(USE_DC)
 	/*! Waveform generation mode, see VOICE_MODE_ enumerated values */
 	uint8_t mode;
+#endif
 	/*! Waveform amplitude */
 	int8_t amplitude;
 	/*! Waveform full period as `sample_freq / frequency` (if applicable) */
@@ -78,11 +90,13 @@ struct voice_wf_def_t {
 /* Compute frequency period of a generic wave */
 uint16_t voice_wf_freq_to_period(uint16_t frequency);
 
+#ifdef USE_DC
 /*!
  * Configure the generator for a DC offset synthesis.
  */
 void voice_wf_set_dc(struct voice_wf_gen_t* const wf_gen,
 		int8_t amplitude);
+#endif
 
 /*!
  * Configure the generator for square wave synthesis.

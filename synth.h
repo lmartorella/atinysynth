@@ -80,8 +80,8 @@ static inline int8_t poly_synth_next(struct poly_synth_t* const synth) {
 					synth, idx, ch_sample);
 #ifdef SUPPORT_MUTE
 			if (!(synth->mute & mask))
-				sample += ch_sample;
 #endif
+			sample += ch_sample;
 			if (voice_ch_is_done(&synth->voice[idx])) {
 				_DPRINTF("poly %p ch=%d done\n", synth, idx);
 				synth->enable &= ~mask;

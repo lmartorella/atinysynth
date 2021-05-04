@@ -66,14 +66,24 @@ static void add_channel_frame(int channel, int frequency, int duration, int volu
 
 	struct seq_frame_t* p = &frame_map.channels[channel].frames[frame_map.channels[channel].count++];
 
-	if (!frequency) {
-		p->waveform_def.mode = VOICE_MODE_DC;
-	} else {
-		p->waveform_def.mode = VOICE_MODE_SQUARE;
-		p->waveform_def.period = voice_wf_freq_to_period(frequency);
-		p->waveform_def.amplitude = volume;
-		p->waveform_def.mode = waveform;
-	}
+#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_NOISE) || defined(USE_DC)
+    p->waveform_def.mode = VOICE_MODE_SQUARE;
+#endif
+
+    if (!frequency) {
+        p->waveform_def.period = 0;
+        p->waveform_def.amplitude = 0;
+#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_NOISE) || defined(USE_DC)
+        // Only square supports pause
+        p->waveform_def.mode = VOICE_MODE_SQUARE;
+#endif
+    } else {
+        p->waveform_def.period = voice_wf_freq_to_period(frequency);
+        p->waveform_def.amplitude = volume;
+#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_NOISE) || defined(USE_DC)
+        p->waveform_def.mode = waveform;
+#endif
+    }
 
     // Init voice, simple square without envelope
 #ifndef ADSR_FIXED_DELAY
@@ -379,12 +389,16 @@ static int mml_parse(const char* content) {
 				case 's': 
 					waveform = VOICE_MODE_SQUARE;
 					break;
+#ifdef USE_SAWTOOTH
 				case 'w': 
 					waveform = VOICE_MODE_SAWTOOTH;
 					break;
+#endif
+#ifdef USE_TRIANGLE
 				case 't': 
 					waveform = VOICE_MODE_TRIANGLE;
 					break;
+#endif
 				default:
 					error_handler("Invalid waveform", line, pos);
 					return 1;

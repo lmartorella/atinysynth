@@ -137,7 +137,9 @@ int main(int argc, char** argv) {
 
 	synth.voice = poly_voice;
 	synth.enable = 0;
+#ifdef SUPPORT_MUTE
 	synth.mute = 0;
+#endif
 
 	memset(poly_voice, 0, sizeof(poly_voice));
 
@@ -210,6 +212,7 @@ int main(int argc, char** argv) {
 			argv++;
 			argc--;
 
+#ifdef SUPPORT_MUTE
 		/* Voice channel muting */
 		} else if (!strcmp(argv[0], "mute")) {
 			int mute = atoi(argv[1]);
@@ -217,6 +220,7 @@ int main(int argc, char** argv) {
 			synth.mute = mute;
 			argv++;
 			argc--;
+#endif
 
 		/* Voice channel enable */
 		} else if (!strcmp(argv[0], "en")) {
@@ -226,6 +230,7 @@ int main(int argc, char** argv) {
 			argv++;
 			argc--;
 
+#ifdef USE_DC
 		/* Voice waveform mode selection */
 		} else if (!strcmp(argv[0], "dc")) {
 			int amp = atoi(argv[1]);
@@ -234,18 +239,17 @@ int main(int argc, char** argv) {
 			voice_wf_set_dc(&poly_voice[voice].wf, amp);
 			argv++;
 			argc--;
-		} 
+#endif
 #ifdef USE_NOISE
-		else if (!strcmp(argv[0], "noise")) {
+		} else if (!strcmp(argv[0], "noise")) {
 			int amp = atoi(argv[1]);
 			_DPRINTF("channel %d mode NOISE amp=%d\n",
 					voice, amp);
 			voice_wf_set_noise(&poly_voice[voice].wf, amp);
 			argv++;
 			argc--;
-		} 
 #endif
-		else if (!strcmp(argv[0], "square")) {
+		} else if (!strcmp(argv[0], "square")) {
 			int freq = atoi(argv[1]);
 			int amp = atoi(argv[2]);
 			_DPRINTF("channel %d mode SQUARE freq=%d amp=%d\n",
@@ -254,9 +258,8 @@ int main(int argc, char** argv) {
 					freq, amp);
 			argv += 2;
 			argc -= 2;
-		} 
 #ifdef USE_SAWTOOTH
-		else if (!strcmp(argv[0], "sawtooth")) {
+		} else if (!strcmp(argv[0], "sawtooth")) {
 			int freq = atoi(argv[1]);
 			int amp = atoi(argv[2]);
 			_DPRINTF("channel %d mode SAWTOOTH freq=%d amp=%d\n",
@@ -265,10 +268,9 @@ int main(int argc, char** argv) {
 					freq, amp);
 			argv += 2;
 			argc -= 2;
-		} 
 #endif
 #ifdef USE_TRIANGLE
-		else if (!strcmp(argv[0], "triangle")) {
+		} else if (!strcmp(argv[0], "triangle")) {
 			int freq = atoi(argv[1]);
 			int amp = atoi(argv[2]);
 			_DPRINTF("channel %d mode TRIANGLE freq=%d amp=%d\n",
@@ -277,11 +279,10 @@ int main(int argc, char** argv) {
 					freq, amp);
 			argv += 2;
 			argc -= 2;
-		} 
 #endif
 
 		/* ADSR options */
-		else if (!strcmp(argv[0], "scale")) {
+		} else if (!strcmp(argv[0], "scale")) {
 			int scale = atoi(argv[1]);
 			_DPRINTF("channel %d ADSR scale %d samples\n",
 					voice, scale);
