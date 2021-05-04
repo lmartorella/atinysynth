@@ -26,11 +26,6 @@
 /*! State used between `seq_play_stream` and `seq_feed_synth` */
 static int frame_count;
 static uint8_t voice_count;
-static uint8_t (*new_frame_require)(struct seq_frame_t* frame);
-
-void seq_set_stream_require_handler(uint8_t (*handler)(struct seq_frame_t* frame)) {
-	new_frame_require = handler;
-}
 
 /*! State of the sequencer compiler */
 struct compiler_state_t {
@@ -92,8 +87,6 @@ void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream,
 
 	// Now play sequencer data, currently by channel, simulating the timing of the synth.
  	struct poly_synth_t synth;
-	struct voice_ch_t* poly_voice = malloc(sizeof(struct voice_ch_t) * valid_channel_count);
-	synth.voice = poly_voice;
 #ifdef SUPPORT_MUTE
 	synth.mute = 0;
 #endif
@@ -113,7 +106,6 @@ void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream,
 		seq_feed_channels(&state);
 	}
 
-	free(poly_voice);
 	free(state.channel_positions);
 }
 
@@ -139,15 +131,15 @@ int seq_play_stream(const struct seq_stream_header_t* stream_header, uint8_t _vo
 }
 
 void seq_feed_synth(struct poly_synth_t* synth) {
-	uintptr_t mask = 1;
-	for (uint8_t i = 0; i < voice_count; i++, mask <<= 1) {
-		if ((synth->enable & mask) == 0) {
-			// Feed data
-			struct seq_frame_t frame;
-			if (!new_frame_require(&frame)) {
-				// End-of-stream
-				return;
-			}
+    for (uint8_t i = 0; i < voice_count; i++) {
+        CHANNEL_MASK_T mask = 1 << i;
+        if ((synth->enable & mask) == 0) {
+            // Feed data
+            struct seq_frame_t frame;
+            if (!new_frame_require(&frame)) {
+                // End-of-stream
+                return;
+            }
 
 			voice_wf_set(&synth->voice[i].wf, &frame.waveform_def);
 			adsr_config(&synth->voice[i].adsr, &frame.adsr_def);

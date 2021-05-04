@@ -26,9 +26,9 @@
 #include <string.h>
 #include <ao/ao.h>
 
+struct poly_synth_t synth;
+
 const uint16_t synth_freq = 32000;
-static struct voice_ch_t poly_voice[16];
-static struct poly_synth_t synth;
 static int16_t samples[8192];
 static uint16_t samples_sz = 0;
 static void (*feed_channels)(struct poly_synth_t* synth) = NULL;
@@ -113,7 +113,7 @@ static int open_mml(const char* name) {
 	return err;
 }
 
-static uint8_t seq_read_frame(struct seq_frame_t* frame) {
+uint8_t new_frame_require(struct seq_frame_t* frame) {
 	return fread(frame, 1, sizeof(struct seq_frame_t), seq_stream) == sizeof(struct seq_frame_t);
 }
 
@@ -126,22 +126,20 @@ static int open_seq(const char* name) {
 
 	fread(&seq_stream_header, 1, sizeof(struct seq_stream_header_t), seq_stream);
 
-	int err = seq_play_stream(&seq_stream_header, sizeof(poly_voice) / sizeof(struct voice_ch_t), &synth);
+	int err = seq_play_stream(&seq_stream_header, VOICE_COUNT, &synth);
 	feed_channels = seq_feed_synth;
-	seq_set_stream_require_handler(seq_read_frame);
 	return err;
 }
 
 int main(int argc, char** argv) {
 	int voice = 0;
 
-	synth.voice = poly_voice;
 	synth.enable = 0;
 #ifdef SUPPORT_MUTE
 	synth.mute = 0;
 #endif
 
-	memset(poly_voice, 0, sizeof(poly_voice));
+	memset(synth.voice, 0, sizeof(synth.voice));
 
 	ao_sample_format format;
 	memset(&format, 0, sizeof(format));
@@ -254,7 +252,7 @@ int main(int argc, char** argv) {
 			int amp = atoi(argv[2]);
 			_DPRINTF("channel %d mode SQUARE freq=%d amp=%d\n",
 					voice, freq, amp);
-			voice_wf_set_square(&poly_voice[voice].wf,
+			voice_wf_set_square(&synth.voice[voice].wf,
 					freq, amp);
 			argv += 2;
 			argc -= 2;
@@ -286,7 +284,7 @@ int main(int argc, char** argv) {
 			int scale = atoi(argv[1]);
 			_DPRINTF("channel %d ADSR scale %d samples\n",
 					voice, scale);
-			poly_voice[voice].adsr.def.time_scale = scale;
+			synth.voice[voice].adsr.def.time_scale = scale;
 			argv++;
 			argc--;
 #ifndef ADSR_FIXED_DELAY
@@ -320,14 +318,14 @@ int main(int argc, char** argv) {
 			int time = atoi(argv[1]);
 			_DPRINTF("channel %d ADSR sustain %d units\n",
 					voice, time);
-			poly_voice[voice].adsr.def.sustain_time = time;
+			synth.voice[voice].adsr.def.sustain_time = time;
 			argv++;
 			argc--;
 		} else if (!strcmp(argv[0], "release")) {
 			int time = atoi(argv[1]);
 			_DPRINTF("channel %d ADSR release %d units\n",
 					voice, time);
-			poly_voice[voice].adsr.def.release_time = time;
+			synth.voice[voice].adsr.def.release_time = time;
 			argv++;
 			argc--;
 #ifndef ADSR_FIXED_PEAK_AMP
@@ -350,7 +348,7 @@ int main(int argc, char** argv) {
 #endif
 		} else if (!strcmp(argv[0], "reset")) {
 			_DPRINTF("channel %d reset\n", voice);
-			adsr_reset(&poly_voice[voice].adsr);
+			adsr_reset(&synth.voice[voice].adsr);
 		}
 
 		argv++;

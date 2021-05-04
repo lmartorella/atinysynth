@@ -54,8 +54,8 @@ struct seq_stream_header_t {
  */
 int seq_play_stream(const struct seq_stream_header_t* stream_header, uint8_t voice_count, struct poly_synth_t* synth);
 
-/*! Requires a new frame. The handler must return 1 if a new frame was acquired, or zero if EOF */
-void seq_set_stream_require_handler(uint8_t (*handler)(struct seq_frame_t* frame));
+/*! Requires a new frame. The handler returns 1 if a new frame was acquired, or zero if EOF */
+uint8_t new_frame_require(struct seq_frame_t* frame);
 
 /*! Use it when `seq_play_stream` is in use, must be called at every sample */
 void seq_feed_synth(struct poly_synth_t* synth);

@@ -36,13 +36,8 @@ extern const uint16_t __attribute__((weak)) synth_freq;
  * Polyphonic synthesizer structure
  */
 struct poly_synth_t {
-#ifdef VOICE_COUNT
 	/*! Pointer to voices.  There may be up to 16 voices referenced. */
 	struct voice_ch_t voice[VOICE_COUNT];
-#else
-	/*! Pointer to voices.  There may be up to 16 voices referenced. */
-	struct voice_ch_t* voice;
-#endif
 	/*!
 	 * Bit-field enabling given voices.  This allows selective turning
 	 * on and off of given voice channels.  If the corresponding bit is
@@ -68,10 +63,11 @@ struct poly_synth_t {
  */
 static inline int8_t poly_synth_next(struct poly_synth_t* const synth) {
 	int16_t sample = 0;
-	CHANNEL_MASK_T mask = 1;
-	uint8_t idx = 0;
+	CHANNEL_MASK_T mask = 1 << (VOICE_COUNT - 1);
+	uint8_t idx = VOICE_COUNT;
 
-	while (mask) {
+	while (idx > 0) {
+		idx--;
 		if (synth->enable & mask) {
 			/* Channel is enabled */
 			int8_t ch_sample = voice_ch_next(
@@ -88,8 +84,7 @@ static inline int8_t poly_synth_next(struct poly_synth_t* const synth) {
 				adsr_reset(&synth->voice[idx].adsr);
 			}
 		}
-		idx++;
-		mask <<= 1;
+		mask >>= 1;
 	}
 
 	/* Handle clipping */
