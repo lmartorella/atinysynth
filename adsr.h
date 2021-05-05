@@ -23,15 +23,6 @@
 #include "debug.h"
 #include <stdint.h>
 
-/*
- * _POLY_CFG_H is a definition that can be given when compiling poly.c
- * and firmware code to define a header file that contains definitions for
- * the Polyphonic synthesizer.
- */
-#ifdef SYNTH_CFG
-#include SYNTH_CFG
-#endif
-
 /* ADSR states */
 #define ADSR_STATE_IDLE			(0x00)
 #define ADSR_STATE_DELAY_INIT		(0x10)
@@ -63,20 +54,30 @@
 struct adsr_env_def_t {
 	/*! Time scale, samples per unit. */
 	TIME_SCALE_T time_scale;
+#ifndef ADSR_FIXED_DELAY
 	/*! Delay period, time units.  UINT8_MAX = infinite */
 	uint8_t delay_time;
+#endif
+#ifndef ADSR_FIXED_ATTACK
 	/*! Attack period, time units */
 	uint8_t attack_time;
+#endif
+#ifndef ADSR_FIXED_DECAY
 	/*! Decay period, time units */
 	uint8_t decay_time;
+#endif
 	/*! Sustain period, time units.  UINT8_MAX = infinite */
 	uint8_t sustain_time;
 	/*! Release period, time units */
 	uint8_t release_time;
+#ifndef ADSR_FIXED_PEAK_AMP
 	/*! Attack peak amplitude */
 	uint8_t peak_amp;
+#endif
+#ifndef ADSR_FIXED_SUSTAIN_AMP
 	/*! Sustain amplitude */
 	uint8_t sustain_amp;
+#endif
 };
 
 /*!
@@ -85,13 +86,13 @@ struct adsr_env_def_t {
 struct adsr_env_gen_t {
 	/*! Definition */
 	struct adsr_env_def_t def;
-	/*! Time to next event, samples.  TIME_SCALE_MAX = infinite */
+	/*! Time to next event in samples.  TIME_SCALE_MAX = infinite */
 	TIME_SCALE_T next_event;
-	/*! Time step, samples */
+	/*! Time step between state counter changes, samples (initial next_event value) */
 	TIME_SCALE_T time_step;
-	/*! ADSR state */
+	/*! Current ADSR state */
 	uint8_t state;
-	/*! ADSR counter */
+	/*! ADSR counter for attack, release and decay pseudo-exponential curve (from 16 to 0) */
 	uint8_t counter;
 	/*! Present amplitude */
 	uint8_t amplitude;

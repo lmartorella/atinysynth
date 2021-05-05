@@ -107,19 +107,53 @@ uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
 			return 0;
 		_DPRINTF("adsr=%p time scale set\n", adsr);
 
-		if (!(adsr->def.delay_time || adsr->def.attack_time
-				|| adsr->def.decay_time
+		if (!(
+#ifdef ADSR_FIXED_DELAY
+                ADSR_FIXED_DELAY
+#else
+                adsr->def.delay_time
+#endif
+                || 
+#ifdef ADSR_FIXED_ATTACK
+                ADSR_FIXED_ATTACK
+#else
+                adsr->def.attack_time
+#endif
+				|| 
+#ifdef ADSR_FIXED_DECAY
+                ADSR_FIXED_DECAY
+#else
+                adsr->def.decay_time
+#endif
 				|| adsr->def.sustain_time
 				|| adsr->def.release_time))
 			return 0;
 		_DPRINTF("adsr=%p envelope timings set\n", adsr);
 
-		if (!(adsr->def.peak_amp || adsr->def.sustain_amp))
+		if (!(
+#ifdef ADSR_FIXED_PEAK_AMP
+                ADSR_FIXED_PEAK_AMP
+#else
+                adsr->def.peak_amp
+#endif
+                || 
+#ifdef ADSR_FIXED_SUSTAIN_AMP
+                ADSR_FIXED_SUSTAIN_AMP
+#else
+                adsr->def.sustain_amp
+#endif
+                ))
 			return 0;
 		_DPRINTF("adsr=%p envelope amplitudes set\n", adsr);
 
 		/* All good */
-		if (adsr->def.delay_time)
+		if (
+#ifdef ADSR_FIXED_DELAY
+                ADSR_FIXED_DELAY
+#else
+                adsr->def.delay_time
+#endif
+           )
 			adsr->state = ADSR_STATE_DELAY_INIT;
 		else
 			adsr->state = ADSR_STATE_DELAY_EXPIRE;
@@ -131,7 +165,13 @@ uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
 		/* Setting up a delay */
 		adsr->amplitude = 0;
 		adsr->next_event = adsr_num_samples(
-				adsr->def.time_scale, adsr->def.delay_time);
+				adsr->def.time_scale, 
+#ifdef ADSR_FIXED_DELAY
+                ADSR_FIXED_DELAY
+#else
+                adsr->def.delay_time
+#endif
+                );
 		adsr->state = ADSR_STATE_DELAY_EXPIRE;
 		/* Wait for delay */
 		return adsr->amplitude;
@@ -141,7 +181,13 @@ uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
 		_DPRINTF("adsr=%p DELAY EXPIRE\n", adsr);
 
 		/* Delay has expired */
-		if (adsr->def.attack_time)
+		if (
+#ifdef ADSR_FIXED_ATTACK
+                ADSR_FIXED_ATTACK
+#else
+                adsr->def.attack_time
+#endif
+           )
 			adsr->state = ADSR_STATE_ATTACK_INIT;
 		else
 			adsr->state = ADSR_STATE_ATTACK_EXPIRE;
@@ -149,7 +195,12 @@ uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
 
 	if (adsr->state == ADSR_STATE_ATTACK_INIT) {
 		/* Attack is divided into 16 segments */
-		adsr->time_step = (TIME_SCALE_T)((adsr->def.attack_time
+		adsr->time_step = (TIME_SCALE_T)((
+#ifdef ADSR_FIXED_ATTACK
+                ADSR_FIXED_ATTACK
+#else
+                adsr->def.attack_time
+#endif
 				* adsr->def.time_scale) >> 4);
 		adsr->counter = 16;
 		adsr->next_event = adsr->time_step;
@@ -165,10 +216,20 @@ uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
 
 		if (adsr->counter) {
 			/* Change of amplitude */
-			uint16_t lin_amp = (16-adsr->counter)
-				* adsr->def.peak_amp;
+			uint16_t lin_amp = (16-adsr->counter) * 
+#ifdef ADSR_FIXED_PEAK_AMP
+                ADSR_FIXED_PEAK_AMP
+#else
+                adsr->def.peak_amp
+#endif
+                    ;
 			uint16_t exp_amp = adsr_attack_amp(
-					adsr->def.peak_amp, adsr->counter);
+#ifdef ADSR_FIXED_DELAY
+                ADSR_FIXED_PEAK_AMP
+#else
+                adsr->def.peak_amp
+#endif
+                    , adsr->counter);
 			lin_amp >>= ADSR_LIN_AMP_FACTOR;
 			_DPRINTF("adsr=%p ATTACK lin=%d exp=%d\n",
 					adsr, lin_amp, exp_amp);
@@ -185,7 +246,13 @@ uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
 	if (adsr->state == ADSR_STATE_ATTACK_EXPIRE) {
 		_DPRINTF("adsr=%p ATTACK EXPIRE\n", adsr);
 
-		if (adsr->def.decay_time)
+		if (
+#ifdef ADSR_FIXED_DECAY
+                ADSR_FIXED_DECAY
+#else
+                adsr->def.decay_time
+#endif
+           )
 			adsr->state = ADSR_STATE_DECAY_INIT;
 		else
 			adsr->state = ADSR_STATE_DECAY_EXPIRE;
@@ -195,9 +262,19 @@ uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
 		_DPRINTF("adsr=%p DECAY INIT\n", adsr);
 
 		/* We should be at full amplitude */
-		adsr->amplitude = adsr->def.peak_amp;
-
-		adsr->time_step = (TIME_SCALE_T)((adsr->def.decay_time
+		adsr->amplitude = 
+#ifdef ADSR_FIXED_PEAK_AMP
+                ADSR_FIXED_PEAK_AMP
+#else
+                adsr->def.peak_amp
+#endif
+                ;
+		adsr->time_step = (TIME_SCALE_T)((
+#ifdef ADSR_FIXED_DECAY
+                ADSR_FIXED_DECAY
+#else
+                adsr->def.decay_time
+#endif
 					* adsr->def.time_scale) >> 4);
 		adsr->counter = 16;
 		adsr->next_event = adsr->time_step;
@@ -209,12 +286,29 @@ uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
 
 		if (adsr->counter) {
 			/* Linear decrease in amplitude */
-			uint16_t delta = adsr->def.peak_amp
-				- adsr->def.sustain_amp;
+			uint16_t delta = 
+#ifdef ADSR_FIXED_PEAK_AMP
+                ADSR_FIXED_PEAK_AMP
+#else
+                adsr->def.peak_amp
+#endif
+                - 
+#ifdef ADSR_FIXED_SUSTAIN_AMP
+                ADSR_FIXED_SUSTAIN_AMP
+#else
+                adsr->def.sustain_amp
+#endif
+                ;
 			delta *= adsr->counter;
 			delta >>= 4;
 
-			adsr->amplitude = adsr->def.sustain_amp + delta;
+			adsr->amplitude = 
+#ifdef ADSR_FIXED_SUSTAIN_AMP
+                ADSR_FIXED_SUSTAIN_AMP
+#else
+                adsr->def.sustain_amp
+#endif
+                    + delta;
 			adsr->next_event = adsr->time_step;
 			adsr->counter--;
 		} else {
@@ -234,7 +328,13 @@ uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
 	if (adsr->state == ADSR_STATE_SUSTAIN_INIT) {
 		_DPRINTF("adsr=%p SUSTAIN INIT\n", adsr);
 
-		adsr->amplitude = adsr->def.sustain_amp;
+		adsr->amplitude = 
+#ifdef ADSR_FIXED_SUSTAIN_AMP
+                ADSR_FIXED_SUSTAIN_AMP
+#else
+                adsr->def.sustain_amp
+#endif
+                  ;
 		adsr->next_event = adsr_num_samples(
 				adsr->def.time_scale, adsr->def.sustain_time);
 		adsr->state = ADSR_STATE_SUSTAIN_EXPIRE;
@@ -266,10 +366,20 @@ uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
 
 		if (adsr->counter) {
 			/* Change of amplitude */
-			uint16_t lin_amp = adsr->counter
-				* adsr->def.sustain_amp;
+			uint16_t lin_amp = adsr->counter * 
+#ifdef ADSR_FIXED_SUSTAIN_AMP
+                ADSR_FIXED_SUSTAIN_AMP
+#else
+                adsr->def.sustain_amp
+#endif
+                       ;
 			uint16_t exp_amp = adsr_release_amp(
-					adsr->def.sustain_amp, adsr->counter);
+#ifdef ADSR_FIXED_SUSTAIN_AMP
+                ADSR_FIXED_SUSTAIN_AMP
+#else
+                adsr->def.sustain_amp
+#endif
+                    , adsr->counter);
 			lin_amp >>= ADSR_LIN_AMP_FACTOR;
 			_DPRINTF("adsr=%p RELEASE lin=%d exp=%d\n",
 					adsr, lin_amp, exp_amp);

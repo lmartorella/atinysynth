@@ -288,6 +288,7 @@ int main(int argc, char** argv) {
 			poly_voice[voice].adsr.def.time_scale = scale;
 			argv++;
 			argc--;
+#ifndef ADSR_FIXED_DELAY
 		} else if (!strcmp(argv[0], "delay")) {
 			int time = atoi(argv[1]);
 			_DPRINTF("channel %d ADSR delay %d units\n",
@@ -295,6 +296,8 @@ int main(int argc, char** argv) {
 			poly_voice[voice].adsr.def.delay_time = time;
 			argv++;
 			argc--;
+#endif
+#ifndef ADSR_FIXED_ATTACK
 		} else if (!strcmp(argv[0], "attack")) {
 			int time = atoi(argv[1]);
 			_DPRINTF("channel %d ADSR attack %d units\n",
@@ -302,6 +305,8 @@ int main(int argc, char** argv) {
 			poly_voice[voice].adsr.def.attack_time = time;
 			argv++;
 			argc--;
+#endif
+#ifndef ADSR_FIXED_DECAY
 		} else if (!strcmp(argv[0], "decay")) {
 			int time = atoi(argv[1]);
 			_DPRINTF("channel %d ADSR decay %d units\n",
@@ -309,6 +314,7 @@ int main(int argc, char** argv) {
 			poly_voice[voice].adsr.def.decay_time = time;
 			argv++;
 			argc--;
+#endif
 		} else if (!strcmp(argv[0], "sustain")) {
 			int time = atoi(argv[1]);
 			_DPRINTF("channel %d ADSR sustain %d units\n",
@@ -323,6 +329,7 @@ int main(int argc, char** argv) {
 			poly_voice[voice].adsr.def.release_time = time;
 			argv++;
 			argc--;
+#ifndef ADSR_FIXED_PEAK_AMP
 		} else if (!strcmp(argv[0], "peak")) {
 			int amp = atoi(argv[1]);
 			_DPRINTF("channel %d ADSR peak amplitude %d\n",
@@ -330,6 +337,8 @@ int main(int argc, char** argv) {
 			poly_voice[voice].adsr.def.peak_amp = amp;
 			argv++;
 			argc--;
+#endif
+#ifndef ADSR_FIXED_SUSTAIN_AMP
 		} else if (!strcmp(argv[0], "samp")) {
 			int amp = atoi(argv[1]);
 			_DPRINTF("channel %d ADSR sustain amplitude %d\n",
@@ -337,6 +346,7 @@ int main(int argc, char** argv) {
 			poly_voice[voice].adsr.def.sustain_amp = amp;
 			argv++;
 			argc--;
+#endif
 		} else if (!strcmp(argv[0], "reset")) {
 			_DPRINTF("channel %d reset\n", voice);
 			adsr_reset(&poly_voice[voice].adsr);

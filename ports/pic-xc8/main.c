@@ -9,7 +9,7 @@
 #include "synth.h"
 #include "sequencer.h"
 
-static struct voice_ch_t poly_voice[1];
+static struct voice_ch_t poly_voice[2];
 static struct poly_synth_t synth;
 
 void main(void) {
