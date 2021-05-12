@@ -41,12 +41,12 @@ void adsr_config(struct adsr_env_gen_t* const adsr, struct adsr_env_def_t* const
  * time units != ADSR_INFINITE (infinite), otherwise it returns
  * TIME_SCALE_MAX.
  */
-static inline TIME_SCALE_T adsr_num_samples(TIME_SCALE_T scale, uint8_t units) {
-	if (units != ADSR_INFINITE)
-		return scale * units;
-	else
-		return TIME_SCALE_MAX;
-}
+// static inline TIME_SCALE_T adsr_num_samples(TIME_SCALE_T scale, uint8_t units) {
+// 	if (units != ADSR_INFINITE)
+// 		return scale * units;
+// 	else
+// 		return TIME_SCALE_MAX;
+// }
 
 /*!
  * ADSR Attack amplitude exponential shift.
@@ -72,7 +72,7 @@ static uint8_t adsr_release_amp(uint8_t amp, uint8_t count) {
 uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
 	if (adsr->next_event) {
 		/* Still waiting for next event */
-		if (adsr->next_event != TIME_SCALE_MAX)
+		//if (adsr->next_event != TIME_SCALE_MAX)
 			adsr->next_event--;
 		_DPRINTF("adsr=%p amp=%d next_in=%d\n",
 				adsr, adsr->amplitude, adsr->next_event);
@@ -103,10 +103,11 @@ uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
 				adsr->sustain_amp);
 
 		/* Are registers set up? */
-		if (!adsr->def.time_scale)
-			return 0;
+//		if (!adsr->def.time_scale)
+//			return 0;
 		_DPRINTF("adsr=%p time scale set\n", adsr);
 
+        /*
 		if (!(
 #ifdef ADSR_FIXED_DELAY
                 ADSR_FIXED_DELAY
@@ -128,8 +129,9 @@ uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
 				|| adsr->def.sustain_time
 				|| adsr->def.release_time))
 			return 0;
+*/
 		_DPRINTF("adsr=%p envelope timings set\n", adsr);
-
+        /*
 		if (!(
 #ifdef ADSR_FIXED_PEAK_AMP
                 ADSR_FIXED_PEAK_AMP
@@ -144,10 +146,10 @@ uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
 #endif
                 ))
 			return 0;
+*/
 		_DPRINTF("adsr=%p envelope amplitudes set\n", adsr);
-
 		/* All good */
-		if (
+/*		if (
 #ifdef ADSR_FIXED_DELAY
                 ADSR_FIXED_DELAY
 #else
@@ -156,28 +158,29 @@ uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
            )
 			adsr->state = ADSR_STATE_DELAY_INIT;
 		else
-			adsr->state = ADSR_STATE_DELAY_EXPIRE;
-	}
-
+*/
+			//adsr->state = ADSR_STATE_DELAY_EXPIRE;
+	//}
+        /*
 	if (adsr->state == ADSR_STATE_DELAY_INIT) {
 		_DPRINTF("adsr=%p DELAY INIT\n", adsr);
 
-		/* Setting up a delay */
+		// Setting up a delay
 		adsr->amplitude = 0;
-		adsr->next_event = adsr_num_samples(
-				adsr->def.time_scale, 
+		adsr->next_event = adsr->def.time_scale * 
 #ifdef ADSR_FIXED_DELAY
                 ADSR_FIXED_DELAY
 #else
                 adsr->def.delay_time
 #endif
-                );
+                ;
 		adsr->state = ADSR_STATE_DELAY_EXPIRE;
-		/* Wait for delay */
+		// Wait for delay 
 		return adsr->amplitude;
 	}
+         */
 
-	if (adsr->state == ADSR_STATE_DELAY_EXPIRE) {
+	//if (adsr->state == ADSR_STATE_DELAY_EXPIRE) {
 		_DPRINTF("adsr=%p DELAY EXPIRE\n", adsr);
 
 		/* Delay has expired */
@@ -335,8 +338,7 @@ uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
                 adsr->def.sustain_amp
 #endif
                   ;
-		adsr->next_event = adsr_num_samples(
-				adsr->def.time_scale, adsr->def.sustain_time);
+		adsr->next_event = adsr->def.time_scale * adsr->def.sustain_time;
 		adsr->state = ADSR_STATE_SUSTAIN_EXPIRE;
 		/* Wait for delay */
 		return adsr->amplitude;

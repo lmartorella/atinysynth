@@ -29,8 +29,6 @@ static uint8_t voice_count;
 
 /*! State of the sequencer compiler */
 struct compiler_state_t {
-	/*! The synth used for simulation */
-	struct poly_synth_t* synth;
 	/*! The input channel map */
 	struct seq_frame_map_t* input_map;
 	/*! The output frame stream */
@@ -49,14 +47,14 @@ static void seq_feed_channels(struct compiler_state_t* state) {
 		// Skip empty channels
 		const struct seq_frame_list_t* channel = &state->input_map->channels[map_idx]; 
 		if (channel->count > 0) {
-			if (state->channel_positions[voice_idx] < channel->count && (state->synth->enable & mask) == 0) {
+			if (state->channel_positions[voice_idx] < channel->count && (synth.enable & mask) == 0) {
 				// Feed data
 				struct seq_frame_t* frame = channel->frames + (state->channel_positions[voice_idx]++);
 
-				voice_wf_set(&state->synth->voice[voice_idx].wf, &frame->waveform_def);
-				adsr_config(&state->synth->voice[voice_idx].adsr, &frame->adsr_def);
+				voice_wf_set(&synth.voice[voice_idx].wf, &frame->waveform_def);
+				adsr_config(&synth.voice[voice_idx].adsr, &frame->adsr_def);
 
-				state->synth->enable |= mask;
+				synth.enable |= mask;
 
 				state->out_stream[state->stream_position++] = *frame;
 				// Don't overload the CPU with multiple frames per sample
@@ -86,7 +84,6 @@ void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream,
 	*frame_stream = malloc(sizeof(struct seq_frame_t) * total_frame_count);
 
 	// Now play sequencer data, currently by channel, simulating the timing of the synth.
- 	struct poly_synth_t synth;
 #ifdef SUPPORT_MUTE
 	synth.mute = 0;
 #endif
@@ -98,7 +95,6 @@ void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream,
 	state.input_map = map;
 	state.out_stream = *frame_stream;
 	state.stream_position = 0;
-	state.synth = &synth;
 
 	seq_feed_channels(&state);
 	while (synth.enable) {
@@ -109,8 +105,8 @@ void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream,
 	free(state.channel_positions);
 }
 
-int seq_play_stream(const struct seq_stream_header_t* stream_header, uint8_t _voice_count, struct poly_synth_t* synth) {
-	if (stream_header->voices > _voice_count) {
+int seq_play_stream(const struct seq_stream_header_t* stream_header) {
+	if (stream_header->voices > VOICE_COUNT) {
 		_DPRINTF("Not enough voices");
 		return 1;
 	}
@@ -126,14 +122,14 @@ int seq_play_stream(const struct seq_stream_header_t* stream_header, uint8_t _vo
 	frame_count = stream_header->frames;
 	voice_count = stream_header->voices;
 	// Disable all channels
-	synth->enable = 0;
+	synth.enable = 0;
 	return 0;
 }
 
-void seq_feed_synth(struct poly_synth_t* synth) {
-    for (uint8_t i = 0; i < voice_count; i++) {
-        CHANNEL_MASK_T mask = 1 << i;
-        if ((synth->enable & mask) == 0) {
+void seq_feed_synth() {
+    CHANNEL_MASK_T mask = 1;
+    for (uint8_t i = 0; i < voice_count; i++, mask <<= 1) {
+        if ((synth.enable & mask) == 0) {
             // Feed data
             struct seq_frame_t frame;
             if (!new_frame_require(&frame)) {
@@ -141,10 +137,10 @@ void seq_feed_synth(struct poly_synth_t* synth) {
                 return;
             }
 
-			voice_wf_set(&synth->voice[i].wf, &frame.waveform_def);
-			adsr_config(&synth->voice[i].adsr, &frame.adsr_def);
+            voice_wf_set(&synth.voice[i].wf, &frame.waveform_def);
+            adsr_config(&synth.voice[i].adsr, &frame.adsr_def);
 
-			synth->enable |= mask;
+            synth.enable |= mask;
 
 			// Don't overload the CPU with multiple frames per sample
 			// This will create minimum phase errors (of 1 sample period) but will keep the process real-time on slower CPUs

@@ -58,34 +58,36 @@ struct poly_synth_t {
 #endif
 };
 
+extern struct poly_synth_t synth;
+
 /*!
  * Compute the next synthesizer sample.
  */
-static inline int8_t poly_synth_next(struct poly_synth_t* const synth) {
+static inline int8_t poly_synth_next() {
 	int16_t sample = 0;
 	CHANNEL_MASK_T mask = 1 << (VOICE_COUNT - 1);
-	uint8_t idx = VOICE_COUNT;
+	uint8_t idx = VOICE_COUNT - 1;
 
-	while (idx > 0) {
-		idx--;
-		if (synth->enable & mask) {
+	do {
+		if (synth.enable & mask) {
 			/* Channel is enabled */
 			int8_t ch_sample = voice_ch_next(
-					&(synth->voice[idx]));
+					&(synth.voice[idx]));
 			_DPRINTF("poly %p ch=%d out=%d\n",
 					synth, idx, ch_sample);
 #ifdef SUPPORT_MUTE
-			if (!(synth->mute & mask))
+			if (!(synth.mute & mask))
 #endif
 			sample += ch_sample;
-			if (voice_ch_is_done(&synth->voice[idx])) {
+			if (synth.voice[idx].adsr.state == ADSR_STATE_DONE) {
 				_DPRINTF("poly %p ch=%d done\n", synth, idx);
-				synth->enable &= ~mask;
-				adsr_reset(&synth->voice[idx].adsr);
+				synth.enable &= ~mask;
+				adsr_reset(&synth.voice[idx].adsr);
 			}
 		}
 		mask >>= 1;
-	}
+		idx--;
+	} while (mask);
 
 	/* Handle clipping */
 	if (sample > INT8_MAX)

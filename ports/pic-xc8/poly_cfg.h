@@ -21,7 +21,7 @@
  * MA  02110-1301  USA
  */
 
-#define SYNTH_FREQ		8000
+#define SYNTH_FREQ		3906
 
 /*! Type for time scale, samples per unit. 
  * 16 bits would allow 2^24 samples of maximum note duration and a total duration of 255 time unit.
@@ -40,7 +40,7 @@
 #define ADSR_FIXED_DELAY 0
 #define ADSR_FIXED_ATTACK 12
 #define ADSR_FIXED_DECAY 12
-#define ADSR_FIXED_PEAK_AMP 63
-#define ADSR_FIXED_SUSTAIN_AMP 40
+#define ADSR_FIXED_PEAK_AMP 120
+#define ADSR_FIXED_SUSTAIN_AMP 80
 
 #endif

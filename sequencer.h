@@ -52,13 +52,13 @@ struct seq_stream_header_t {
  * The frames must then be sorted in the same fetch order and not in channel order.
  * Frames will be fed using the handler passed by `seq_set_stream_require_handler`.
  */
-int seq_play_stream(const struct seq_stream_header_t* stream_header, uint8_t voice_count, struct poly_synth_t* synth);
+int seq_play_stream(const struct seq_stream_header_t* stream_header);
 
 /*! Requires a new frame. The handler returns 1 if a new frame was acquired, or zero if EOF */
 uint8_t new_frame_require(struct seq_frame_t* frame);
 
 /*! Use it when `seq_play_stream` is in use, must be called at every sample */
-void seq_feed_synth(struct poly_synth_t* synth);
+void seq_feed_synth();
 
 /*! List of frames, used by `seq_frame_map_t` */
 struct seq_frame_list_t {

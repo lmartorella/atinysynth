@@ -126,7 +126,7 @@ static int open_seq(const char* name) {
 
 	fread(&seq_stream_header, 1, sizeof(struct seq_stream_header_t), seq_stream);
 
-	int err = seq_play_stream(&seq_stream_header, VOICE_COUNT, &synth);
+	int err = seq_play_stream(&seq_stream_header);
 	feed_channels = seq_feed_synth;
 	return err;
 }

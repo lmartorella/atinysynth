@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/bin/pc/synth",
-            "args": ["sequencer", "sequencer.bin"],
+            "args": ["compile-mml", "resources/loreley.mml"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

@@ -129,15 +129,13 @@ void voice_wf_set_dc(struct voice_wf_gen_t* const wf_gen,
 }
 #endif
 
-static void voice_wf_set_square_p(struct voice_wf_gen_t* const wf_gen,
-		uint16_t period, int8_t amplitude) {
+void voice_wf_set(struct voice_wf_gen_t* const wf_gen, struct voice_wf_def_t* const wf_def) {
+//static void voice_wf_set_square_p(struct voice_wf_gen_t* const wf_gen, struct voice_wf_def_t* const wf_def) {
 #if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_NOISE) || defined(USE_DC)
 	wf_gen->mode = VOICE_MODE_SQUARE;
 #endif
-	wf_gen->int_amplitude = amplitude;
-	wf_gen->period = period >> 1;
-	wf_gen->period_remain = wf_gen->period;
-	wf_gen->int_sample = wf_gen->int_amplitude;
+	wf_gen->int_sample = wf_gen->int_amplitude = wf_def->amplitude;
+	wf_gen->period_remain = wf_gen->period = wf_def->period >> 1;
 	_DPRINTF("wf=%p INIT mode=SQUARE amp=%d per=%d rem=%d "
 			"→ sample=%d\n",
 			wf_gen, wf_gen->amplitude, wf_gen->period,
@@ -145,10 +143,15 @@ static void voice_wf_set_square_p(struct voice_wf_gen_t* const wf_gen,
 			wf_gen->sample);
 }
 
-void voice_wf_set_square(struct voice_wf_gen_t* const wf_gen,
-		uint16_t freq, int8_t amplitude) {
-	uint16_t period = voice_wf_freq_to_period(freq);
-	voice_wf_set_square_p(wf_gen, period, amplitude);
+void voice_wf_set_square_p(struct voice_wf_gen_t* const wf_gen, uint16_t period, int8_t amplitude) {
+	struct voice_wf_def_t wf_def;
+	wf_def.period = period >> 1;
+	wf_def.amplitude = amplitude;
+	voice_wf_set(wf_gen, &wf_def);
+}
+
+void voice_wf_set_square(struct voice_wf_gen_t* const wf_gen, uint16_t freq, int8_t amplitude) {
+	voice_wf_set_square_p(wf_gen, voice_wf_freq_to_period(freq), amplitude);
 }
 
 #ifdef USE_SAWTOOTH
@@ -205,7 +208,7 @@ void voice_wf_set_noise(struct voice_wf_gen_t* const wf_gen,
 }
 #endif
 
-void voice_wf_set(struct voice_wf_gen_t* const wf_gen, struct voice_wf_def_t* const wf_def) {
+void voice_wf_set_(struct voice_wf_gen_t* const wf_gen, struct voice_wf_def_t* const wf_def) {
 #if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_NOISE) || defined(USE_DC)
 	switch (wf_def->mode) 
 #endif

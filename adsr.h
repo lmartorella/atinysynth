@@ -25,8 +25,8 @@
 
 /* ADSR states */
 #define ADSR_STATE_IDLE			(0x00)
-#define ADSR_STATE_DELAY_INIT		(0x10)
-#define ADSR_STATE_DELAY_EXPIRE		(0x1f)
+//#define ADSR_STATE_DELAY_INIT		(0x10)
+//#define ADSR_STATE_DELAY_EXPIRE		(0x1f)
 #define ADSR_STATE_ATTACK_INIT		(0x20)
 #define ADSR_STATE_ATTACK		(0x21)
 #define ADSR_STATE_ATTACK_EXPIRE	(0x2f)
@@ -46,7 +46,7 @@
  * Hold this state until `adsr_continue` is called.  Valid for
  * `delay_time` and `sustain_time` only.
  */
-#define ADSR_INFINITE			UINT8_MAX
+//#define ADSR_INFINITE			UINT8_MAX
 
 /*!
  * ADSR Envelope Generator definition.
@@ -55,7 +55,7 @@ struct adsr_env_def_t {
 	/*! Time scale, samples per unit. */
 	TIME_SCALE_T time_scale;
 #ifndef ADSR_FIXED_DELAY
-	/*! Delay period, time units.  UINT8_MAX = infinite */
+	/*! Delay period, time units.  ADSR_INFINITE = infinite */
 	uint8_t delay_time;
 #endif
 #ifndef ADSR_FIXED_ATTACK
@@ -66,7 +66,7 @@ struct adsr_env_def_t {
 	/*! Decay period, time units */
 	uint8_t decay_time;
 #endif
-	/*! Sustain period, time units.  UINT8_MAX = infinite */
+	/*! Sustain period, time units.  ADSR_INFINITE = infinite */
 	uint8_t sustain_time;
 	/*! Release period, time units */
 	uint8_t release_time;
@@ -142,11 +142,11 @@ static inline uint8_t adsr_is_done(struct adsr_env_gen_t* const adsr) {
 /*!
  * Test to see if the ADSR is awaiting a trigger.
  */
-static inline uint8_t adsr_is_waiting(struct adsr_env_gen_t* const adsr) {
-	return ((adsr->next_event == TIME_SCALE_MAX)
-			&& ((adsr->state == ADSR_STATE_DELAY_EXPIRE)
-				|| (adsr->state == ADSR_STATE_SUSTAIN_EXPIRE)));
-}
+// static inline uint8_t adsr_is_waiting(struct adsr_env_gen_t* const adsr) {
+// 	return ((adsr->next_event == TIME_SCALE_MAX)
+// 			&& ((adsr->state == ADSR_STATE_DELAY_EXPIRE)
+// 				|| (adsr->state == ADSR_STATE_SUSTAIN_EXPIRE)));
+// }
 
 /*!
  * Test to see if the ADSR is idle.
