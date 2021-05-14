@@ -22,15 +22,6 @@
 #include "voice.h"
 #include "debug.h"
 
-/*
- * _POLY_CFG_H is a definition that can be given when compiling poly.c
- * and firmware code to define a header file that contains definitions for
- * the Polyphonic synthesizer.
- */
-#ifdef SYNTH_CFG
-#include SYNTH_CFG
-#endif
-
 #ifndef SYNTH_FREQ
 /*!
  * Sample rate for the synthesizer: this needs to be declared in the
