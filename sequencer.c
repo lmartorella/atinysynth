@@ -24,7 +24,6 @@
 #include <string.h>
 
 /*! State used between `seq_play_stream` and `seq_feed_synth` */
-static int frame_count;
 static uint8_t voice_count;
 
 /*! State of the sequencer compiler */
@@ -78,10 +77,10 @@ void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream,
 		}
 	}
 
-	// Prepare output buffer, with total frame count
-	*frame_count = total_frame_count;
+	// Prepare output buffer, with total frame count, plus ending frame
+	*frame_count = total_frame_count + 1;
 	*voice_count = valid_channel_count;
-	*frame_stream = malloc(sizeof(struct seq_frame_t) * total_frame_count);
+	*frame_stream = malloc(sizeof(struct seq_frame_t) * (*frame_count));
 
 	// Now play sequencer data, currently by channel, simulating the timing of the synth.
 #ifdef SUPPORT_MUTE
@@ -101,7 +100,10 @@ void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream,
 		poly_synth_next(&synth);
 		seq_feed_channels(&state);
 	}
-
+    
+    // Add end frame (zero)
+    memset((*frame_stream) + total_frame_count, 0, sizeof(struct seq_frame_t));
+    
 	free(state.channel_positions);
 }
 
@@ -119,7 +121,6 @@ int seq_play_stream(const struct seq_stream_header_t* stream_header) {
         return 1;
     }
 
-	frame_count = stream_header->frames;
 	voice_count = stream_header->voices;
 	// Disable all channels
 	synth.enable = 0;
@@ -127,18 +128,21 @@ int seq_play_stream(const struct seq_stream_header_t* stream_header) {
 }
 
 void seq_feed_synth() {
-    CHANNEL_MASK_T mask = 1;
-    for (uint8_t i = 0; i < voice_count; i++, mask <<= 1) {
+	CHANNEL_MASK_T mask = 1;
+    struct voice_ch_t* voice = synth.voice;
+	uint8_t i = voice_count;
+    do {
         if ((synth.enable & mask) == 0) {
             // Feed data
             struct seq_frame_t frame;
-            if (!new_frame_require(&frame)) {
+			new_frame_require(&frame);
+            if (frame.adsr_def.time_scale == 0) {
                 // End-of-stream
                 return;
             }
 
-            voice_wf_set(&synth.voice[i].wf, &frame.waveform_def);
-            adsr_config(&synth.voice[i].adsr, &frame.adsr_def);
+            voice_wf_set(&voice->wf, &frame.waveform_def);
+            adsr_config(&voice->adsr, &frame.adsr_def);
 
             synth.enable |= mask;
 
@@ -146,7 +150,10 @@ void seq_feed_synth() {
 			// This will create minimum phase errors (of 1 sample period) but will keep the process real-time on slower CPUs
 			break;
 		}
-	}
+		mask <<= 1;
+		voice++;
+		i--;
+	} while (i);
 }
 
 void seq_free(struct seq_frame_t* frame_stream) {

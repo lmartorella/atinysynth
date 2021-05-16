@@ -17,25 +17,21 @@
 
 struct poly_synth_t synth;
 
-#define COUNT 3
-
-static const struct seq_stream_header_t seq_stream_header = { SYNTH_FREQ, sizeof(struct seq_frame_t), 3, COUNT };
-static const struct seq_frame_t seq_stream_data[COUNT] = {
+static const struct seq_stream_header_t seq_stream_header = { SYNTH_FREQ, sizeof(struct seq_frame_t), 4 };
+static const struct seq_frame_t seq_stream_data[] = {
     { { 100, 0x50 }, { 127, SYNTH_FREQ * 16 / 440 } },
     { { 100, 0x50 }, { 127, SYNTH_FREQ * 16 / 440 } },
     { { 100, 0x50 }, { 127, SYNTH_FREQ * 16 / 440 } },
+    { { 100, 0x50 }, { 127, SYNTH_FREQ * 16 / 440 } },
+    { 0, 0 }, { 0, 0 }
 };
 
-static uint16_t i = 0;
+static const struct seq_frame_t* ptr;
 
-uint8_t new_frame_require(struct seq_frame_t* frame) {
-    if (i < COUNT) {
-        memcpy(frame, seq_stream_data + i, sizeof(struct seq_frame_t));
-        i++;
-        return 1;
-    } else {
-        return 0;
-    }
+void new_frame_require(struct seq_frame_t* frame) {
+    // *frame = *ptr; gives "registers unavailable for code generation"
+    memcpy(frame, ptr, sizeof(struct seq_frame_t));
+    ptr++;
 }
 
 // Creates a SYNTH_FREQ / 4 square wave
@@ -93,7 +89,7 @@ void main() {
 
     while (1) {
         seq_play_stream(&seq_stream_header);
-        i = 0;
+        ptr = seq_stream_data;
 
         seq_feed_synth();
         uint8_t level = 1;

@@ -102,7 +102,6 @@ static int open_mml(const char* name) {
 	}
 	seq_stream_header.frame_size = sizeof(struct seq_frame_t);
 	seq_stream_header.synth_frequency = synth_freq;
-	seq_stream_header.frames = frame_count;
 	seq_stream_header.voices = voice_count;
 	fwrite(&seq_stream_header, 1, sizeof(struct seq_stream_header_t), out);
 	fwrite(frame_stream, frame_count, sizeof(struct seq_frame_t), out);
@@ -113,8 +112,10 @@ static int open_mml(const char* name) {
 	return err;
 }
 
-uint8_t new_frame_require(struct seq_frame_t* frame) {
-	return fread(frame, 1, sizeof(struct seq_frame_t), seq_stream) == sizeof(struct seq_frame_t);
+void new_frame_require(struct seq_frame_t* frame) {
+	if (fread(frame, 1, sizeof(struct seq_frame_t), seq_stream) != sizeof(struct seq_frame_t)) {
+		memset(frame, 0, sizeof(struct seq_frame_t));
+	}
 }
 
 static int open_seq(const char* name) {

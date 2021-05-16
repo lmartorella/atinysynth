@@ -66,27 +66,26 @@ extern struct poly_synth_t synth;
 static inline int8_t poly_synth_next() {
 	int16_t sample = 0;
 	CHANNEL_MASK_T mask = 1 << (VOICE_COUNT - 1);
-	uint8_t idx = VOICE_COUNT - 1;
+    struct voice_ch_t* voice = &synth.voice[VOICE_COUNT - 1];
 
 	do {
 		if (synth.enable & mask) {
 			/* Channel is enabled */
-			int8_t ch_sample = voice_ch_next(
-					&(synth.voice[idx]));
-			_DPRINTF("poly %p ch=%d out=%d\n",
-					synth, idx, ch_sample);
+			int8_t ch_sample = voice_ch_next(voice);
+//			_DPRINTF("poly %p ch=%d out=%d\n",
+//					synth, idx, ch_sample);
 #ifdef SUPPORT_MUTE
 			if (!(synth.mute & mask))
 #endif
 			sample += ch_sample;
-			if (synth.voice[idx].adsr.state_counter == ADSR_STATE_DONE) {
-				_DPRINTF("poly %p ch=%d done\n", synth, idx);
+			if (voice->adsr.state_counter == ADSR_STATE_DONE) {
+				//_DPRINTF("poly %p ch=%d done\n", synth, idx);
 				synth.enable &= ~mask;
-				adsr_reset(&synth.voice[idx].adsr);
+				adsr_reset(&voice->adsr);
 			}
 		}
 		mask >>= 1;
-		idx--;
+        voice--;
 	} while (mask);
 
 	/* Handle clipping */

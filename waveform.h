@@ -85,7 +85,7 @@ struct voice_wf_def_t {
 	int8_t amplitude;
 	/*! Waveform full period as `sample_freq / frequency` (if applicable) */
 	uint16_t period;
-};
+} __attribute__((packed));
 
 /* Compute frequency period of a generic wave */
 uint16_t voice_wf_freq_to_period(uint16_t frequency);

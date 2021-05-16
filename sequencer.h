@@ -33,7 +33,7 @@ struct seq_frame_t {
 	struct adsr_env_def_t adsr_def;
 	/*! Waveform definition */
 	struct voice_wf_def_t waveform_def;
-};
+} __attribute__((packed));
 
 struct seq_stream_header_t {
 	/*! Sampling frequency required for correct timing */
@@ -42,10 +42,8 @@ struct seq_stream_header_t {
 	uint8_t frame_size;
 	/*! Number of voices. They will all be enabled */
 	uint8_t voices;
-	/*! Total frame count */
-	uint16_t frames;
 	/*! Follow frames data, as stream of seq_frame_t */
-};
+} __attribute__((packed));
 
 /*! 
  * Plays a stream sequence of frames, in the order requested by the synth.
@@ -54,8 +52,8 @@ struct seq_stream_header_t {
  */
 int seq_play_stream(const struct seq_stream_header_t* stream_header);
 
-/*! Requires a new frame. The handler returns 1 if a new frame was acquired, or zero if EOF */
-uint8_t new_frame_require(struct seq_frame_t* frame);
+/*! Requires a new frame. The call never fails. Returns a zero frame at the end of the stream, or if EOF */
+void new_frame_require(struct seq_frame_t* frame);
 
 /*! Use it when `seq_play_stream` is in use, must be called at every sample */
 void seq_feed_synth();

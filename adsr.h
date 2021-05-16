@@ -43,7 +43,7 @@ struct adsr_env_def_t {
 	TIME_SCALE_T time_scale;
 	/*! When the release period starts, time units */
 	uint8_t release_start;
-};
+} __attribute__((packed));
 
 /*!
  * ADSR Envelope Generator data. 

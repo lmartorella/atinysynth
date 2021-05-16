@@ -30,7 +30,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/bin/pc/synth",
-            "args": ["play", "sequencer.bin"],
+            "args": ["sequencer", "sequencer.bin"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
