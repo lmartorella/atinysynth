@@ -22,6 +22,7 @@
       <itemPath>../../sequencer.c</itemPath>
       <itemPath>../../waveform.c</itemPath>
       <itemPath>main.c</itemPath>
+      <itemPath>../../tune.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"

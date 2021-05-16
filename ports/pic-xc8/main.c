@@ -17,14 +17,8 @@
 
 struct poly_synth_t synth;
 
-static const struct seq_stream_header_t seq_stream_header = { SYNTH_FREQ, sizeof(struct seq_frame_t), 4 };
-static const struct seq_frame_t seq_stream_data[] = {
-    { { 100, 0x50 }, { 127, SYNTH_FREQ * 16 / 440 } },
-    { { 100, 0x50 }, { 127, SYNTH_FREQ * 16 / 440 } },
-    { { 100, 0x50 }, { 127, SYNTH_FREQ * 16 / 440 } },
-    { { 100, 0x50 }, { 127, SYNTH_FREQ * 16 / 440 } },
-    { 0, 0 }, { 0, 0 }
-};
+extern const struct seq_stream_header_t tune_header;
+extern const struct seq_frame_t tune_data[];
 
 static const struct seq_frame_t* ptr;
 
@@ -88,8 +82,8 @@ void main() {
     //test_freq();
 
     while (1) {
-        seq_play_stream(&seq_stream_header);
-        ptr = seq_stream_data;
+        seq_play_stream(&tune_header);
+        ptr = tune_data;
 
         seq_feed_synth();
         uint8_t level = 1;

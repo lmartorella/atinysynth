@@ -28,7 +28,7 @@
 
 struct poly_synth_t synth;
 
-const uint16_t synth_freq = 32000;
+const uint16_t synth_freq = 3906;
 static int16_t samples[8192];
 static uint16_t samples_sz = 0;
 static void (*feed_channels)(struct poly_synth_t* synth) = NULL;
@@ -94,19 +94,39 @@ static int open_mml(const char* name) {
 	seq_compile(&map, &frame_stream, &frame_count, &voice_count);
 	mml_free(&map);
 
-	// Save the compiled output to out.seq
-	FILE *out = fopen("sequencer.bin", "wb");
-	if (!out) {
+	// Save the compiled output to sequencer.bin (binary compact format)
+	FILE *bin = fopen("sequencer.bin", "wb");
+	if (!bin) {
 		fprintf(stderr, "Cannot write the sequencer.bin file\n");
 		return 1;
 	}
 	seq_stream_header.frame_size = sizeof(struct seq_frame_t);
 	seq_stream_header.synth_frequency = synth_freq;
 	seq_stream_header.voices = voice_count;
-	fwrite(&seq_stream_header, 1, sizeof(struct seq_stream_header_t), out);
-	fwrite(frame_stream, frame_count, sizeof(struct seq_frame_t), out);
+	fwrite(&seq_stream_header, 1, sizeof(struct seq_stream_header_t), bin);
+	fwrite(frame_stream, frame_count, sizeof(struct seq_frame_t), bin);
 	_DPRINTF("File sequencer.bin written\n");
-	fclose(out);
+	fclose(bin);
+
+	// Save the compiled output to sequencer_inc.c (C source)
+	FILE *cSrc = fopen("sequencer_in.c", "w");
+	if (!cSrc) {
+		fprintf(stderr, "Cannot write the sequencer_in.c file\n");
+		return 1;
+	}
+	fprintf(cSrc, "// %s\n", name);
+	fprintf(cSrc, "const struct seq_stream_header_t tune_header = { %d, %d, %d };\n", synth_freq, sizeof(struct seq_frame_t), voice_count);
+	fprintf(cSrc, "const struct seq_frame_t tune_data[] = {\n");
+	for (int i = 0; i < frame_count; i++) {
+		fprintf(cSrc, "\t{ { %d, %d }, { %d, %d }},\n", 
+			frame_stream[i].adsr_def.time_scale, 
+			frame_stream[i].adsr_def.release_start,
+			frame_stream[i].waveform_def.amplitude,
+			frame_stream[i].waveform_def.period);
+	}
+	fprintf(cSrc, "};\n");
+	_DPRINTF("File sequencer_in.c written\n");
+	fclose(cSrc);
 
 	seq_free(frame_stream);
 	return err;

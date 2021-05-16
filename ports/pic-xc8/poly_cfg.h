@@ -37,7 +37,4 @@
 #undef USE_TRIANGLE
 #undef USE_NOISE
 
-#define ADSR_FIXED_PEAK_AMP 120
-#define ADSR_FIXED_SUSTAIN_AMP 80
-
 #endif
