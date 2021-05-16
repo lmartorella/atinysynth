@@ -28,7 +28,6 @@
 
 struct poly_synth_t synth;
 
-const uint16_t synth_freq = 3906;
 static int16_t samples[8192];
 static uint16_t samples_sz = 0;
 static void (*feed_channels)(struct poly_synth_t* synth) = NULL;
