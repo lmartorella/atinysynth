@@ -31,7 +31,7 @@
 #define TIME_SCALE_MAX  UINT16_MAX
 #define CHANNEL_MASK_T  uint8_t
 
-#define VOICE_COUNT 2
+#define VOICE_COUNT 3
 
 #undef USE_SAWTOOTH
 #undef USE_TRIANGLE

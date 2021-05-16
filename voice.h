@@ -49,25 +49,18 @@ inline static uint8_t voice_ch_is_done(struct voice_ch_t* const voice) {
  * Compute the next voice channel sample.
  */
 inline static int8_t voice_ch_next(struct voice_ch_t* const voice) {
-	uint8_t amplitude = adsr_next(&(voice->adsr));
-	_DPRINTF("ch=%p amp=%d\n", voice, amplitude);
-	if (!amplitude)
+	uint8_t gain = adsr_next(&(voice->adsr));
+	_DPRINTF("ch=%p gain=%d\n", voice, -gain);
+	if (gain == 8) {
 		return 0;
+	}
 
-	int16_t value = voice_wf_next(&(voice->wf));
+	int8_t value = voice_wf_next(&(voice->wf));
 	_DPRINTF("ch=%p value=%d\n", voice, value);
-	value *= amplitude;
-	value >>= 8;
+	value >>= gain;
 
 	_DPRINTF("ch=%p out=%d\n", voice, value);
-
-	/* Saturation handling */
-	if (value < INT8_MIN)
-		return INT8_MIN;
-	else if (value > INT8_MAX)
-		return INT8_MAX;
-	else
-		return value;
+	return value;
 }
 
 /*

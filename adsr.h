@@ -43,14 +43,6 @@ struct adsr_env_def_t {
 	TIME_SCALE_T time_scale;
 	/*! When the release period starts, time units */
 	uint8_t release_start;
-#ifndef ADSR_FIXED_PEAK_AMP
-	/*! Attack peak amplitude */
-	uint8_t peak_amp;
-#endif
-#ifndef ADSR_FIXED_SUSTAIN_AMP
-	/*! Sustain amplitude */
-	uint8_t sustain_amp;
-#endif
 };
 
 /*!
@@ -63,8 +55,8 @@ struct adsr_env_gen_t {
 	TIME_SCALE_T next_event;
 	/*! Current ADSR state / counter */
 	uint8_t state_counter;
-	/*! Present amplitude */
-	uint8_t amplitude;
+	/*! Present gain (0 is max, 1 is half, etc...) */
+	uint8_t gain;
 };
 
 /*!
@@ -97,7 +89,7 @@ static inline void adsr_reset(struct adsr_env_gen_t* const adsr) {
 void adsr_config(struct adsr_env_gen_t* const adsr, struct adsr_env_def_t* const def);
 
 /*!
- * Compute the ADSR amplitude
+ * Compute the ADSR gain as bit shift count (0 is full amplitude, 1 is half, etc...)
  */
 uint8_t adsr_next(struct adsr_env_gen_t* const adsr);
 

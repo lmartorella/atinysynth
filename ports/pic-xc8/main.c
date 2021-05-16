@@ -17,11 +17,13 @@
 
 struct poly_synth_t synth;
 
-#define COUNT 1
+#define COUNT 3
 
-static const struct seq_stream_header_t seq_stream_header = { SYNTH_FREQ, sizeof(struct seq_frame_t), 1, COUNT };
+static const struct seq_stream_header_t seq_stream_header = { SYNTH_FREQ, sizeof(struct seq_frame_t), 3, COUNT };
 static const struct seq_frame_t seq_stream_data[COUNT] = {
-    { { SYNTH_FREQ, 2, 2 }, { 127, SYNTH_FREQ * 16 / 440 } },
+    { { 100, 0x50 }, { 127, SYNTH_FREQ * 16 / 440 } },
+    { { 100, 0x50 }, { 127, SYNTH_FREQ * 16 / 440 } },
+    { { 100, 0x50 }, { 127, SYNTH_FREQ * 16 / 440 } },
 };
 
 static uint16_t i = 0;
