@@ -134,6 +134,9 @@ void voice_wf_set(struct voice_wf_gen_t* const wf_gen, struct voice_wf_def_t* co
  */
 int8_t voice_wf_next(struct voice_wf_gen_t* const wf_gen);
 
+/*! Setup def */
+void voice_wf_setup_def(struct voice_wf_def_t* wf_def, uint16_t frequency, uint8_t amplitude, uint8_t waveform);
+
 #endif
 /*
  * vim: set sw=8 ts=8 noet si tw=72

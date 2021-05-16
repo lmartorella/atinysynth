@@ -67,7 +67,8 @@ int8_t voice_wf_next(struct voice_wf_gen_t* const wf_gen) {
 				} else {
 					wf_gen->period_remain -= (1 << PERIOD_FP_SCALE);
 				}
-			}			_DPRINTF("wf=%p mode=SQUARE amp=%d rem=%d "
+			}
+			_DPRINTF("wf=%p mode=SQUARE amp=%d rem=%d "
 					"→ sample=%d\n",
 					wf_gen, wf_gen->amplitude,
 					wf_gen->period_remain,
@@ -135,7 +136,7 @@ void voice_wf_set(struct voice_wf_gen_t* const wf_gen, struct voice_wf_def_t* co
 	wf_gen->mode = VOICE_MODE_SQUARE;
 #endif
 	wf_gen->int_sample = wf_gen->int_amplitude = wf_def->amplitude;
-	wf_gen->period_remain = wf_gen->period = wf_def->period >> 1;
+	wf_gen->period_remain = wf_gen->period = wf_def->period;
 	_DPRINTF("wf=%p INIT mode=SQUARE amp=%d per=%d rem=%d "
 			"→ sample=%d\n",
 			wf_gen, wf_gen->amplitude, wf_gen->period,
@@ -145,6 +146,7 @@ void voice_wf_set(struct voice_wf_gen_t* const wf_gen, struct voice_wf_def_t* co
 
 void voice_wf_set_square_p(struct voice_wf_gen_t* const wf_gen, uint16_t period, int8_t amplitude) {
 	struct voice_wf_def_t wf_def;
+	// Half period for square generator
 	wf_def.period = period >> 1;
 	wf_def.amplitude = amplitude;
 	voice_wf_set(wf_gen, &wf_def);
@@ -182,6 +184,7 @@ static void voice_wf_set_triangle_p(struct voice_wf_gen_t* const wf_gen,
 		uint16_t period, int8_t amplitude) {
 	wf_gen->mode = VOICE_MODE_TRIANGLE;
 	wf_gen->fp_sample = -(int16_t)amplitude << VOICE_WF_AMP_SCALE;
+	// Half period for square generator
 	wf_gen->period = period >> 1;
 	wf_gen->period_remain = wf_gen->period;
 	wf_gen->fp_amplitude = -wf_gen->fp_sample;
@@ -239,6 +242,21 @@ void voice_wf_set_(struct voice_wf_gen_t* const wf_gen, struct voice_wf_def_t* c
 			return;
 #endif
 	}
+}
+
+void voice_wf_setup_def(struct voice_wf_def_t* wf_def, uint16_t frequency, uint8_t amplitude, uint8_t waveform) {
+	wf_def->amplitude = amplitude;
+	wf_def->period = frequency > 0 ? voice_wf_freq_to_period(frequency) : 0;
+#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_NOISE) || defined(USE_DC)
+	wf_def->mode = waveform;
+	if (waveform == VOICE_MODE_TRIANGLE || waveform == VOICE_MODE_SQUARE) {
+		// Half period for square and triangle generators
+		wf_def->period >>= 1;
+	}
+#else
+	// Half period for square generator
+	wf_def->period >>= 1;
+#endif
 }
 
 /*

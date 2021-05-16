@@ -66,23 +66,16 @@ static void add_channel_frame(int channel, int frequency, int duration, int volu
 
 	struct seq_frame_t* p = &frame_map.channels[channel].frames[frame_map.channels[channel].count++];
 
-#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_NOISE) || defined(USE_DC)
-    p->waveform_def.mode = VOICE_MODE_SQUARE;
-#endif
-
     if (!frequency) {
-        p->waveform_def.period = 0;
+#ifdef USE_DC
         p->waveform_def.amplitude = 0;
-#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_NOISE) || defined(USE_DC)
+        p->waveform_def.mode = VOICE_MODE_DC;
+#else
         // Only square supports pause
-        p->waveform_def.mode = VOICE_MODE_SQUARE;
+		voice_wf_setup_def(&p->waveform_def, 0, 0, VOICE_MODE_SQUARE);
 #endif
     } else {
-        p->waveform_def.period = voice_wf_freq_to_period(frequency);
-        p->waveform_def.amplitude = volume;
-#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_NOISE) || defined(USE_DC)
-        p->waveform_def.mode = waveform;
-#endif
+		voice_wf_setup_def(&p->waveform_def, frequency, volume, waveform);
     }
 
     // Init voice, simple square without envelope
