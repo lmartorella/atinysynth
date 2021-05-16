@@ -287,47 +287,47 @@ int main(int argc, char** argv) {
 			synth.voice[voice].adsr.def.time_scale = scale;
 			argv++;
 			argc--;
-#ifndef ADSR_FIXED_DELAY
-		} else if (!strcmp(argv[0], "delay")) {
-			int time = atoi(argv[1]);
-			_DPRINTF("channel %d ADSR delay %d units\n",
-					voice, time);
-			poly_voice[voice].adsr.def.delay_time = time;
-			argv++;
-			argc--;
-#endif
-#ifndef ADSR_FIXED_ATTACK
-		} else if (!strcmp(argv[0], "attack")) {
-			int time = atoi(argv[1]);
-			_DPRINTF("channel %d ADSR attack %d units\n",
-					voice, time);
-			poly_voice[voice].adsr.def.attack_time = time;
-			argv++;
-			argc--;
-#endif
-#ifndef ADSR_FIXED_DECAY
-		} else if (!strcmp(argv[0], "decay")) {
-			int time = atoi(argv[1]);
-			_DPRINTF("channel %d ADSR decay %d units\n",
-					voice, time);
-			poly_voice[voice].adsr.def.decay_time = time;
-			argv++;
-			argc--;
-#endif
+// #ifndef ADSR_FIXED_DELAY
+// 		} else if (!strcmp(argv[0], "delay")) {
+// 			int time = atoi(argv[1]);
+// 			_DPRINTF("channel %d ADSR delay %d units\n",
+// 					voice, time);
+// 			poly_voice[voice].adsr.def.delay_time = time;
+// 			argv++;
+// 			argc--;
+// #endif
+// #ifndef ADSR_FIXED_ATTACK
+// 		} else if (!strcmp(argv[0], "attack")) {
+// 			int time = atoi(argv[1]);
+// 			_DPRINTF("channel %d ADSR attack %d units\n",
+// 					voice, time);
+// 			poly_voice[voice].adsr.def.attack_time = time;
+// 			argv++;
+// 			argc--;
+// #endif
+// #ifndef ADSR_FIXED_DECAY
+// 		} else if (!strcmp(argv[0], "decay")) {
+// 			int time = atoi(argv[1]);
+// 			_DPRINTF("channel %d ADSR decay %d units\n",
+// 					voice, time);
+// 			poly_voice[voice].adsr.def.decay_time = time;
+// 			argv++;
+// 			argc--;
+// #endif
 		} else if (!strcmp(argv[0], "sustain")) {
 			int time = atoi(argv[1]);
 			_DPRINTF("channel %d ADSR sustain %d units\n",
 					voice, time);
-			synth.voice[voice].adsr.def.sustain_time = time;
+			synth.voice[voice].adsr.def.release_start = ADSR_STATE_SUSTAIN_START + time;
 			argv++;
 			argc--;
-		} else if (!strcmp(argv[0], "release")) {
-			int time = atoi(argv[1]);
-			_DPRINTF("channel %d ADSR release %d units\n",
-					voice, time);
-			synth.voice[voice].adsr.def.release_time = time;
-			argv++;
-			argc--;
+		// } else if (!strcmp(argv[0], "release")) {
+		// 	int time = atoi(argv[1]);
+		// 	_DPRINTF("channel %d ADSR release %d units\n",
+		// 			voice, time);
+		// 	synth.voice[voice].adsr.def.release_time = time;
+		// 	argv++;
+		// 	argc--;
 #ifndef ADSR_FIXED_PEAK_AMP
 		} else if (!strcmp(argv[0], "peak")) {
 			int amp = atoi(argv[1]);

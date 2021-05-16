@@ -79,7 +79,7 @@ static inline int8_t poly_synth_next() {
 			if (!(synth.mute & mask))
 #endif
 			sample += ch_sample;
-			if (synth.voice[idx].adsr.state == ADSR_STATE_DONE) {
+			if (synth.voice[idx].adsr.state_counter == ADSR_STATE_DONE) {
 				_DPRINTF("poly %p ch=%d done\n", synth, idx);
 				synth.enable &= ~mask;
 				adsr_reset(&synth.voice[idx].adsr);

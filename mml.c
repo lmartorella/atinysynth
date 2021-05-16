@@ -78,16 +78,6 @@ static void add_channel_frame(int channel, int frequency, int duration, int volu
 		voice_wf_setup_def(&p->waveform_def, frequency, volume, waveform);
     }
 
-    // Init voice, simple square without envelope
-#ifndef ADSR_FIXED_DELAY
-    p->adsr_def.delay_time = 0;
-#endif
-#ifndef ADSR_FIXED_ATTACK
-    p->adsr_def.attack_time = 12;
-#endif
-#ifndef ADSR_FIXED_DECAY
-    p->adsr_def.decay_time = 12;
-#endif
 #ifndef ADSR_FIXED_PEAK_AMP
     p->adsr_def.peak_amp = 63;
 #endif
@@ -95,29 +85,10 @@ static void add_channel_frame(int channel, int frequency, int duration, int volu
     p->adsr_def.sustain_amp = 40;
 #endif
 
-	// Calc duration and scale: TODO better scale algo
-	int scale = duration / 128;
-	p->adsr_def.time_scale = scale;
-	p->adsr_def.release_time = 128 * (1.0 - articulation); 
-	p->adsr_def.sustain_time = 128 - (
-#ifndef ADSR_FIXED_DELAY
-		p->adsr_def.delay_time 
-#else
-		ADSR_FIXED_DELAY
-#endif
-       	+ 
-#ifndef ADSR_FIXED_ATTACK
-        p->adsr_def.attack_time 
-#else
-        ADSR_FIXED_ATTACK
-#endif
-        +
-#ifndef ADSR_FIXED_DECAY
-        p->adsr_def.decay_time 
-#else
-        ADSR_FIXED_DECAY
-#endif
-        + p->adsr_def.release_time);
+	// Calc duration and scale
+	TIME_SCALE_T time_scale = duration / ADSR_TIME_UNITS;
+	p->adsr_def.time_scale = time_scale;
+	p->adsr_def.release_start = (uint8_t)(ADSR_TIME_UNITS * articulation) - 1; 
 }
 
 void mml_set_error_handler(void (*handler)(const char* err, int line, int column)) {

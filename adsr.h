@@ -23,30 +23,17 @@
 #include "debug.h"
 #include <stdint.h>
 
-/* ADSR states */
-#define ADSR_STATE_IDLE			(0x00)
-//#define ADSR_STATE_DELAY_INIT		(0x10)
-//#define ADSR_STATE_DELAY_EXPIRE		(0x1f)
-#define ADSR_STATE_ATTACK_INIT		(0x20)
-#define ADSR_STATE_ATTACK		(0x21)
-#define ADSR_STATE_ATTACK_EXPIRE	(0x2f)
-#define ADSR_STATE_DECAY_INIT		(0x30)
-#define ADSR_STATE_DECAY		(0x31)
-#define ADSR_STATE_DECAY_EXPIRE		(0x3f)
-#define ADSR_STATE_SUSTAIN_INIT		(0x40)
-#define ADSR_STATE_SUSTAIN_EXPIRE	(0x4f)
-#define ADSR_STATE_RELEASE_INIT		(0x50)
-#define ADSR_STATE_RELEASE		(0x51)
-#define ADSR_STATE_RELEASE_EXPIRE	(0x5f)
-#define ADSR_STATE_DONE			(0xff)
+/* ADSR states, in time units. MAX_TIME_UNIT is fixed, and terminates the envelope */
+#define ADSR_STATE_INIT     		0x00
+#define ADSR_STATE_DECAY_START		0x10
+#define ADSR_STATE_SUSTAIN_START	0x20
+// Release start is dynamic
+#define ADSR_STATE_RELEASE_DURATION 0x10
+#define ADSR_STATE_DONE				0x7f
+
+#define ADSR_TIME_UNITS (ADSR_STATE_DONE + 1)
 
 #include "poly_cfg.h"
-
-/*!
- * Hold this state until `adsr_continue` is called.  Valid for
- * `delay_time` and `sustain_time` only.
- */
-//#define ADSR_INFINITE			UINT8_MAX
 
 /*!
  * ADSR Envelope Generator definition.
@@ -54,22 +41,8 @@
 struct adsr_env_def_t {
 	/*! Time scale, samples per unit. */
 	TIME_SCALE_T time_scale;
-#ifndef ADSR_FIXED_DELAY
-	/*! Delay period, time units.  ADSR_INFINITE = infinite */
-	uint8_t delay_time;
-#endif
-#ifndef ADSR_FIXED_ATTACK
-	/*! Attack period, time units */
-	uint8_t attack_time;
-#endif
-#ifndef ADSR_FIXED_DECAY
-	/*! Decay period, time units */
-	uint8_t decay_time;
-#endif
-	/*! Sustain period, time units.  ADSR_INFINITE = infinite */
-	uint8_t sustain_time;
-	/*! Release period, time units */
-	uint8_t release_time;
+	/*! When the release period starts, time units */
+	uint8_t release_start;
 #ifndef ADSR_FIXED_PEAK_AMP
 	/*! Attack peak amplitude */
 	uint8_t peak_amp;
@@ -86,14 +59,10 @@ struct adsr_env_def_t {
 struct adsr_env_gen_t {
 	/*! Definition */
 	struct adsr_env_def_t def;
-	/*! Time to next event in samples.  TIME_SCALE_MAX = infinite */
+	/*! Time to next event in samples.*/
 	TIME_SCALE_T next_event;
-	/*! Time step between state counter changes, samples (initial next_event value) */
-	TIME_SCALE_T time_step;
-	/*! Current ADSR state */
-	uint8_t state;
-	/*! ADSR counter for attack, release and decay pseudo-exponential curve (from 16 to 0) */
-	uint8_t counter;
+	/*! Current ADSR state / counter */
+	uint8_t state_counter;
 	/*! Present amplitude */
 	uint8_t amplitude;
 };
@@ -103,7 +72,7 @@ struct adsr_env_gen_t {
  */
 static inline void adsr_reset(struct adsr_env_gen_t* const adsr) {
 	adsr->next_event = 0;
-	adsr->state = ADSR_STATE_IDLE;
+	adsr->state_counter = ADSR_STATE_INIT;
 	_DPRINTF("adsr=%p INIT time_scale=%d "
 			"delay_time=%d "
 			"attack_time=%d "
@@ -136,7 +105,7 @@ uint8_t adsr_next(struct adsr_env_gen_t* const adsr);
  * Test to see if the ADSR is done.
  */
 static inline uint8_t adsr_is_done(struct adsr_env_gen_t* const adsr) {
-	return (adsr->state == ADSR_STATE_DONE);
+	return (adsr->state_counter == ADSR_STATE_DONE);
 }
 
 /*!
@@ -148,12 +117,12 @@ static inline uint8_t adsr_is_done(struct adsr_env_gen_t* const adsr) {
 // 				|| (adsr->state == ADSR_STATE_SUSTAIN_EXPIRE)));
 // }
 
-/*!
- * Test to see if the ADSR is idle.
- */
-static inline uint8_t adsr_is_idle(struct adsr_env_gen_t* const adsr) {
-	return (adsr->state == ADSR_STATE_IDLE);
-}
+// /*!
+//  * Test to see if the ADSR is idle.
+//  */
+// static inline uint8_t adsr_is_idle(struct adsr_env_gen_t* const adsr) {
+// 	return (adsr->state == ADSR_STATE_IDLE);
+// }
 
 /*!
  * Tell the ADSR to move onto the next state.
