@@ -21,6 +21,7 @@
 #define _ADSR_H
 
 #include "debug.h"
+#include "sequencer.h"
 #include <stdint.h>
 
 /* ADSR states, in time units. MAX_TIME_UNIT is fixed, and terminates the envelope */
@@ -41,9 +42,9 @@
 struct adsr_env_def_t {
 	/*! Time scale, samples per unit. */
 	TIME_SCALE_T time_scale;
-	/*! When the release period starts, time units */
+	/*! When the release period starts, time units over the ADSR_TIME_UNITS scale */
 	uint8_t release_start;
-} __attribute__((packed));
+};
 
 /*!
  * ADSR Envelope Generator data. 
@@ -86,7 +87,7 @@ static inline void adsr_reset(struct adsr_env_gen_t* const adsr) {
 /*!
  * Configure the ADSR.
  */
-void adsr_config(struct adsr_env_gen_t* const adsr, struct adsr_env_def_t* const def);
+void adsr_config(struct adsr_env_gen_t* const adsr, struct seq_frame_t* const frame);
 
 /*!
  * Compute the ADSR gain as bit shift count (0 is full amplitude, 1 is half, etc...)

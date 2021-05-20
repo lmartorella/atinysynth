@@ -119,13 +119,13 @@ void voice_wf_set_dc(struct voice_wf_gen_t* const wf_gen,
 }
 #endif
 
-void voice_wf_set(struct voice_wf_gen_t* const wf_gen, struct voice_wf_def_t* const wf_def) {
+void voice_wf_set(struct voice_wf_gen_t* const wf_gen, struct seq_frame_t* const frame) {
 //static void voice_wf_set_square_p(struct voice_wf_gen_t* const wf_gen, struct voice_wf_def_t* const wf_def) {
 #if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_DC)
 	wf_gen->mode = VOICE_MODE_SQUARE;
 #endif
-	wf_gen->int_sample = wf_gen->int_amplitude = wf_def->amplitude;
-	wf_gen->period_remain = wf_gen->period = wf_def->period;
+	wf_gen->int_sample = wf_gen->int_amplitude = frame->wf_amplitude;
+	wf_gen->period_remain = wf_gen->period = frame->wf_period;
 	_DPRINTF("wf=%p INIT mode=SQUARE amp=%d per=%d rem=%d "
 			"→ sample=%d\n",
 			wf_gen, wf_gen->amplitude, wf_gen->period,
@@ -134,11 +134,11 @@ void voice_wf_set(struct voice_wf_gen_t* const wf_gen, struct voice_wf_def_t* co
 }
 
 void voice_wf_set_square_p(struct voice_wf_gen_t* const wf_gen, uint16_t period, int8_t amplitude) {
-	struct voice_wf_def_t wf_def;
+	struct seq_frame_t frame;
 	// Half period for square generator
-	wf_def.period = period >> 1;
-	wf_def.amplitude = amplitude;
-	voice_wf_set(wf_gen, &wf_def);
+	frame.wf_period = period >> 1;
+	frame.wf_amplitude = amplitude;
+	voice_wf_set(wf_gen, &frame);
 }
 
 void voice_wf_set_square(struct voice_wf_gen_t* const wf_gen, uint16_t freq, int8_t amplitude) {
@@ -220,17 +220,17 @@ void voice_wf_set_(struct voice_wf_gen_t* const wf_gen, struct voice_wf_def_t* c
 	}
 }
 
-void voice_wf_setup_def(struct voice_wf_def_t* wf_def, uint16_t frequency, uint8_t amplitude, uint8_t waveform) {
-	wf_def->amplitude = amplitude;
-	wf_def->period = frequency > 0 ? voice_wf_freq_to_period(frequency) : 0;
-#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_DC)
-	wf_def->mode = waveform;
-	if (waveform == VOICE_MODE_TRIANGLE || waveform == VOICE_MODE_SQUARE) {
-		// Half period for square and triangle generators
-		wf_def->period >>= 1;
+int8_t voice_wf_setup_def(struct seq_frame_t* frame, uint16_t frequency, uint8_t amplitude, uint8_t waveform) {
+	if (waveform != VOICE_MODE_SQUARE) {
+		// Not supported
+		return 0;
 	}
-#else
-	// Half period for square generator
-	wf_def->period >>= 1;
-#endif
+	uint16_t period = frequency > 0 ? (voice_wf_freq_to_period(frequency) >> 1): 0;
+	if (amplitude > 0x7f || period > 0x3fff) {
+		// Out of range for 7/14-bit packed data
+		return 0;
+	}
+	frame->wf_amplitude = amplitude;
+	frame->wf_period = period;
+	return 1;
 }

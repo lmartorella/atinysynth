@@ -49,7 +49,7 @@ static void init_stream_channel(int channel) {
 	frame_map.channels[channel].frames = malloc(sizeof(struct seq_frame_t) * 16);
 }
 
-static void add_channel_frame(int channel, int frequency, int duration, int volume, double articulation, int waveform) {
+static uint8_t add_channel_frame(int channel, int frequency, int duration, int volume, double articulation, int waveform) {
 	if (channel >= frame_map.channel_count) {
 		int old_count = frame_map.channel_count;
 		frame_map.channel_count = channel + 1;
@@ -64,7 +64,7 @@ static void add_channel_frame(int channel, int frequency, int duration, int volu
 		frame_map.channels[channel].frames = realloc(frame_map.channels[channel].frames, sizeof(struct seq_frame_t) * (frame_map.channels[channel].count + 16));
 	}
 
-	struct seq_frame_t* p = &frame_map.channels[channel].frames[frame_map.channels[channel].count++];
+	struct seq_frame_t* frame = &frame_map.channels[channel].frames[frame_map.channels[channel].count++];
 
     if (!frequency) {
 #ifdef USE_DC
@@ -72,16 +72,28 @@ static void add_channel_frame(int channel, int frequency, int duration, int volu
         p->waveform_def.mode = VOICE_MODE_DC;
 #else
         // Only square supports pause
-		voice_wf_setup_def(&p->waveform_def, 0, 0, VOICE_MODE_SQUARE);
+		if (!voice_wf_setup_def(frame, 0, 0, VOICE_MODE_SQUARE)) {
+			error_handler("Can't pack frame: pause", line, pos);
+			return 0;
+		}
 #endif
     } else {
-		voice_wf_setup_def(&p->waveform_def, frequency, volume, waveform);
+		if (!voice_wf_setup_def(frame, frequency, volume, waveform)) {
+			error_handler("Can't pack frame: waveform", line, pos);
+			return 0;
+		}
     }
 
 	// Calc duration and scale
 	TIME_SCALE_T time_scale = duration / ADSR_TIME_UNITS;
-	p->adsr_def.time_scale = time_scale;
-	p->adsr_def.release_start = (uint8_t)(ADSR_TIME_UNITS * articulation) - 1; 
+	if (time_scale > 0x3fff) {
+		// Out of range for 7/14-bit packed data
+		error_handler("Can't pack frame: adsr time_scale", line, pos);
+		return 0;
+	}
+	frame->adsr_time_scale = time_scale;
+	frame->adsr_release_start = (uint8_t)(ADSR_TIME_UNITS * articulation) - 1; 
+	return 1;
 }
 
 void mml_set_error_handler(void (*handler)(const char* err, int line, int column)) {
@@ -438,7 +450,9 @@ static int mml_parse(const char* content) {
 					}
 					int frequency = isPause ? 0 : (isNoteCode ? get_freq_from_code(noteCode) : get_freq_from_note(code, sharp, mml_channel_states[i].octave));
 					int duration = get_duration(mml_channel_states[i].tempo, length < 0 ? mml_channel_states[i].defaultLength : length, (length < 0 && !dot) ? mml_channel_states[i].defaultLengthDot : dot);
-					add_channel_frame(i, frequency, duration, mml_channel_states[i].volume, mml_channel_states[i].articulation, mml_channel_states[i].waveform);
+					if (!add_channel_frame(i, frequency, duration, mml_channel_states[i].volume, mml_channel_states[i].articulation, mml_channel_states[i].waveform)) {
+						return 1;
+					}
 				}
 			}
 		} else {

@@ -24,27 +24,6 @@
             ],
             "preLaunchTask": "Make project",
             "miDebuggerPath": "/usr/bin/gdb"
-        },
-        {
-            "name": "Play",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "${workspaceFolder}/bin/pc/synth",
-            "args": ["sequencer", "sequencer.bin"],
-            "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "gdb",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                }
-            ],
-            "preLaunchTask": "Make project",
-            "miDebuggerPath": "/usr/bin/gdb"
         }
     ]
 }

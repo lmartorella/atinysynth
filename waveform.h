@@ -21,6 +21,8 @@
 #define _WAVEFORM_H
 #include <stdint.h>
 
+#include "sequencer.h"
+
 /*!
  * Waveform generator state.  12 bytes.
  */
@@ -78,11 +80,11 @@ struct voice_wf_def_t {
 	/*! Waveform generation mode, see VOICE_MODE_ enumerated values */
 	uint8_t mode;
 #endif
-	/*! Waveform amplitude */
+	/*! Waveform amplitude (7-bit) */
 	int8_t amplitude;
-	/*! Waveform full period as `sample_freq / frequency` (if applicable) */
+	/*! Waveform full period as `sample_freq / frequency`, or zero for pauses */
 	uint16_t period;
-} __attribute__((packed));
+};
 
 /* Compute frequency period of a generic wave */
 uint16_t voice_wf_freq_to_period(uint16_t frequency);
@@ -120,7 +122,7 @@ void voice_wf_set_triangle(struct voice_wf_gen_t* const wf_gen,
 /*!
  * Configure the generator using waveform type and common parameters
  */
-void voice_wf_set(struct voice_wf_gen_t* const wf_gen, struct voice_wf_def_t* const wf_def);
+void voice_wf_set(struct voice_wf_gen_t* const wf_gen, struct seq_frame_t* const frame);
 
 /*!
  * Retrieve the next sample from the generator.
@@ -128,7 +130,7 @@ void voice_wf_set(struct voice_wf_gen_t* const wf_gen, struct voice_wf_def_t* co
 int8_t voice_wf_next(struct voice_wf_gen_t* const wf_gen);
 
 /*! Setup def */
-void voice_wf_setup_def(struct voice_wf_def_t* wf_def, uint16_t frequency, uint8_t amplitude, uint8_t waveform);
+int8_t voice_wf_setup_def(struct seq_frame_t* frame, uint16_t frequency, uint8_t amplitude, uint8_t waveform);
 
 #endif
 /*

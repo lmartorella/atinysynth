@@ -14,18 +14,14 @@
 #include <string.h>
 #include "synth.h"
 #include "sequencer.h"
-
+    
 struct poly_synth_t synth;
 
-extern const struct seq_stream_header_t tune_header;
-extern const struct seq_frame_t tune_data[];
+extern const void* tune_data;
+static void* tune_ptr;
 
-static const struct seq_frame_t* ptr;
-
-void new_frame_require(struct seq_frame_t* frame) {
-    // *frame = *ptr; gives "registers unavailable for code generation"
-    memcpy(frame, ptr, sizeof(struct seq_frame_t));
-    ptr++;
+void new_frame_require() {
+    
 }
 
 // Creates a SYNTH_FREQ / 4 square wave
@@ -82,9 +78,8 @@ void main() {
     //test_freq();
 
     while (1) {
-        seq_play_stream(&tune_header);
-        ptr = tune_data;
-
+        tune_ptr = &tune_data;
+        seq_play_stream(SEQ_VOICE_COUNT);
         seq_feed_synth();
 
         while (synth.enable) {

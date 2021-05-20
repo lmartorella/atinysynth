@@ -22,7 +22,7 @@
       <itemPath>../../sequencer.c</itemPath>
       <itemPath>../../waveform.c</itemPath>
       <itemPath>main.c</itemPath>
-      <itemPath>../../tune.c</itemPath>
+      <itemPath>../../tune_gen.s</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -41,7 +41,7 @@
         <targetDevice>PIC12F683</targetDevice>
         <targetHeader></targetHeader>
         <targetPluginBoard></targetPluginBoard>
-        <platformTool>PICkit3PlatformTool</platformTool>
+        <platformTool>noID</platformTool>
         <languageToolchain>XC8</languageToolchain>
         <languageToolchainVersion>2.32</languageToolchainVersion>
         <platform>3</platform>
@@ -82,6 +82,7 @@
         <property key="call-prologues" value="false"/>
         <property key="default-bitfield-type" value="true"/>
         <property key="default-char-type" value="true"/>
+        <property key="define-macros" value=""/>
         <property key="disable-optimizations" value="false"/>
         <property key="extra-include-directories" value=".;../.."/>
         <property key="favor-optimization-for" value="-speed,+space"/>

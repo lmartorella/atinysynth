@@ -25,8 +25,9 @@
 /*!
  * Configure the ADSR.
  */
-void adsr_config(struct adsr_env_gen_t* const adsr, struct adsr_env_def_t* const def) {
-	adsr->def = *def;
+void adsr_config(struct adsr_env_gen_t* const adsr, struct seq_frame_t* const frame) {
+	adsr->def.release_start = frame->adsr_release_start;
+	adsr->def.time_scale = frame->adsr_time_scale;
 	adsr_reset(adsr);
 }
 

@@ -18,14 +18,22 @@
  * MA  02110-1301  USA
  */
 
-#include "sequencer.h"
 #include "debug.h"
+#include "sequencer.h"
+#include "synth.h"
 #include <stdlib.h>
 #include <string.h>
 
 /*! State used between `seq_play_stream` and `seq_feed_synth` */
-static uint8_t voice_count;
+#ifndef SEQ_VOICE_COUNT
+static uint8_t seq_voice_count;
+#else
+#define seq_voice_count SEQ_VOICE_COUNT
+#endif
+uint8_t end = 0;
 
+struct seq_frame_t seq_buf_frame;
+        
 /*! State of the sequencer compiler */
 struct compiler_state_t {
 	/*! The input channel map */
@@ -50,8 +58,8 @@ static void seq_feed_channels(struct compiler_state_t* state) {
 				// Feed data
 				struct seq_frame_t* frame = channel->frames + (state->channel_positions[voice_idx]++);
 
-				voice_wf_set(&synth.voice[voice_idx].wf, &frame->waveform_def);
-				adsr_config(&synth.voice[voice_idx].adsr, &frame->adsr_def);
+				voice_wf_set(&synth.voice[voice_idx].wf, frame);
+				adsr_config(&synth.voice[voice_idx].adsr, frame);
 
 				synth.enable |= mask;
 
@@ -94,7 +102,7 @@ void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream,
 
 	seq_feed_channels(&state);
 	while (synth.enable) {
-		poly_synth_next(&synth);
+		poly_synth_next();
 		seq_feed_channels(&state);
 	}
     
@@ -104,42 +112,34 @@ void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream,
 	free(state.channel_positions);
 }
 
-int seq_play_stream(const struct seq_stream_header_t* stream_header) {
-	if (stream_header->voices > VOICE_COUNT) {
-		_DPRINTF("Not enough voices");
-		return 1;
-	}
-	if (stream_header->synth_frequency != synth_freq) {
-		_DPRINTF("Mismatching sampling frequency");
-		return 1;
-	}
-    if (stream_header->frame_size != sizeof(struct seq_frame_t)) {
-        _DPRINTF("Mismatching frame size");
-        return 1;
-    }
-
-	voice_count = stream_header->voices;
+void seq_play_stream(uint8_t voices) {
+#ifndef SEQ_VOICE_COUNT
+	seq_voice_count = voices;
+#endif
 	// Disable all channels
 	synth.enable = 0;
-	return 0;
+    end = 0;
 }
 
 void seq_feed_synth() {
-	CHANNEL_MASK_T mask = 1;
-    struct voice_ch_t* voice = synth.voice;
-	uint8_t i = voice_count;
+	if (end) {
+		return;
+	}
+
+	CHANNEL_MASK_T mask = 1 << (seq_voice_count - 1);
+    struct voice_ch_t* voice = &synth.voice[seq_voice_count - 1];
     do {
         if ((synth.enable & mask) == 0) {
             // Feed data
-            struct seq_frame_t frame;
-			new_frame_require(&frame);
-            if (frame.adsr_def.time_scale == 0) {
+			new_frame_require();
+            if (seq_buf_frame.adsr_time_scale == 0) {
                 // End-of-stream
+				end = 1;
                 return;
             }
 
-            voice_wf_set(&voice->wf, &frame.waveform_def);
-            adsr_config(&voice->adsr, &frame.adsr_def);
+            voice_wf_set(&voice->wf, &seq_buf_frame);
+            adsr_config(&voice->adsr, &seq_buf_frame);
 
             synth.enable |= mask;
 
@@ -147,12 +147,11 @@ void seq_feed_synth() {
 			// This will create minimum phase errors (of 1 sample period) but will keep the process real-time on slower CPUs
 			break;
 		}
-		mask <<= 1;
-		voice++;
-		i--;
-	} while (i);
+		mask >>= 1;
+		voice--;
+	} while (mask);
 }
 
-void seq_free(struct seq_frame_t* frame_stream) {
-	free(frame_stream);
+void seq_free(struct seq_frame_t* seq_frame_stream) {
+	free(seq_frame_stream);
 }

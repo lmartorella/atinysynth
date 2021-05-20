@@ -20,40 +20,35 @@
 #ifndef _SEQUENCER_H
 #define _SEQUENCER_H
 
-#include "adsr.h"
-#include "waveform.h"
-#include "synth.h"
+#include <stdint.h>
 
 /*! 
  * Define a single step/frame of the sequencer. It applies to the active channel.
  * Contains the definition of the next waveform and envelope.
  */
 struct seq_frame_t {
-	/*! Envelope definition */
-	struct adsr_env_def_t adsr_def;
-	/*! Waveform definition */
-	struct voice_wf_def_t waveform_def;
-} __attribute__((packed));
-
-struct seq_stream_header_t {
-	/*! Sampling frequency required for correct timing */
-	uint16_t synth_frequency;
-	/*! Size of a single frame in bytes */
-	uint8_t frame_size;
-	/*! Number of voices. They will all be enabled */
-	uint8_t voices;
-	/*! Follow frames data, as stream of seq_frame_t */
-} __attribute__((packed));
+    /*! ADSR time-scale (14-bit max) */
+    uint16_t adsr_time_scale;
+    /*! Waveform full period as `sample_freq / frequency`, or zero for pauses (14-bit max) */
+    uint16_t wf_period;
+    /*! Waveform amplitude (7-bit wide) */
+    uint8_t wf_amplitude;
+    /*! When the release period starts, time units over the ADSR_TIME_UNITS scale (7-bit wide) */
+    uint8_t adsr_release_start;
+};
 
 /*! 
  * Plays a stream sequence of frames, in the order requested by the synth.
  * The frames must then be sorted in the same fetch order and not in channel order.
- * Frames will be fed using the handler passed by `seq_set_stream_require_handler`.
+ * Frames will be fed using the handler passed by `new_frame_require`.
  */
-int seq_play_stream(const struct seq_stream_header_t* stream_header);
+void seq_play_stream(uint8_t voices);
 
 /*! Requires a new frame. The call never fails. Returns a zero frame at the end of the stream, or if EOF */
-void new_frame_require(struct seq_frame_t* frame);
+extern struct seq_frame_t seq_buf_frame;
+
+/*! Requires a new frame to be written in `seq_buf_frame`. The call never fails. */
+void new_frame_require();
 
 /*! Use it when `seq_play_stream` is in use, must be called at every sample */
 void seq_feed_synth();
@@ -82,6 +77,6 @@ struct seq_frame_map_t {
 void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream, int* frame_count, int* voice_count);
 
 /*! Free the stream allocated by `seq_compile`. */
-void seq_free(struct seq_frame_t* frame_stream);
+void seq_free(struct seq_frame_t* seq_frame_stream);
 
 #endif
