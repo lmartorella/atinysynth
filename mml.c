@@ -78,13 +78,6 @@ static void add_channel_frame(int channel, int frequency, int duration, int volu
 		voice_wf_setup_def(&p->waveform_def, frequency, volume, waveform);
     }
 
-#ifndef ADSR_FIXED_PEAK_AMP
-    p->adsr_def.peak_amp = 63;
-#endif
-#ifndef ADSR_FIXED_SUSTAIN_AMP
-    p->adsr_def.sustain_amp = 40;
-#endif
-
 	// Calc duration and scale
 	TIME_SCALE_T time_scale = duration / ADSR_TIME_UNITS;
 	p->adsr_def.time_scale = time_scale;

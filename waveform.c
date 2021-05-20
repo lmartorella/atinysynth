@@ -23,7 +23,7 @@
 #include "debug.h"
 #include <stdlib.h>
 
-/* Amplitude scaling */
+/* Amplitude scaling when 16 bits are used */
 #define VOICE_WF_AMP_SCALE	(8)
 
 /*!
@@ -35,7 +35,7 @@
 #define PERIOD_FP_SCALE 	(4)
 
 int8_t voice_wf_next(struct voice_wf_gen_t* const wf_gen) {
-#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_NOISE) || defined(USE_DC)
+#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_DC)
 	switch(wf_gen->mode) 
 #endif
     {
@@ -45,18 +45,7 @@ int8_t voice_wf_next(struct voice_wf_gen_t* const wf_gen) {
 					wf_gen, wf_gen->amplitude);
 			return wf_gen->int_amplitude;
 #endif
-#ifdef USE_NOISE
-		case VOICE_MODE_NOISE: {
-			uint16_t sample = (rand() /
-				(RAND_MAX/512)) - 256;
-			sample *= wf_gen->int_amplitude;
-			_DPRINTF("wf=%p mode=NOISE amp=%d → sample=%d\n",
-					wf_gen, wf_gen->amplitude,
-					wf_gen->sample);
-			return sample >> VOICE_WF_AMP_SCALE;
-		}
-#endif
-#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_NOISE) || defined(USE_DC)
+#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_DC)
 		case VOICE_MODE_SQUARE:
 #endif
 			if (wf_gen->period > 0) {
@@ -132,7 +121,7 @@ void voice_wf_set_dc(struct voice_wf_gen_t* const wf_gen,
 
 void voice_wf_set(struct voice_wf_gen_t* const wf_gen, struct voice_wf_def_t* const wf_def) {
 //static void voice_wf_set_square_p(struct voice_wf_gen_t* const wf_gen, struct voice_wf_def_t* const wf_def) {
-#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_NOISE) || defined(USE_DC)
+#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_DC)
 	wf_gen->mode = VOICE_MODE_SQUARE;
 #endif
 	wf_gen->int_sample = wf_gen->int_amplitude = wf_def->amplitude;
@@ -203,16 +192,8 @@ void voice_wf_set_triangle(struct voice_wf_gen_t* const wf_gen,
 }
 #endif
 
-#ifdef USE_NOISE
-void voice_wf_set_noise(struct voice_wf_gen_t* const wf_gen,
-		int8_t amplitude) {
-	wf_gen->mode = VOICE_MODE_NOISE;
-	wf_gen->int_amplitude = amplitude;
-}
-#endif
-
 void voice_wf_set_(struct voice_wf_gen_t* const wf_gen, struct voice_wf_def_t* const wf_def) {
-#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_NOISE) || defined(USE_DC)
+#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_DC)
 	switch (wf_def->mode) 
 #endif
     {
@@ -221,7 +202,7 @@ void voice_wf_set_(struct voice_wf_gen_t* const wf_gen, struct voice_wf_def_t* c
 			voice_wf_set_dc(wf_gen, wf_def->amplitude);
 			return;
 #endif
-#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_NOISE) || defined(USE_DC)
+#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_DC)
 		case VOICE_MODE_SQUARE:
 #endif
 			voice_wf_set_square_p(wf_gen, wf_def->period, wf_def->amplitude);
@@ -236,18 +217,13 @@ void voice_wf_set_(struct voice_wf_gen_t* const wf_gen, struct voice_wf_def_t* c
 			voice_wf_set_triangle_p(wf_gen, wf_def->period, wf_def->amplitude);
 			return;
 #endif
-#ifdef USE_NOISE
-		case VOICE_MODE_NOISE:
-			voice_wf_set_noise(wf_gen, wf_def->amplitude);
-			return;
-#endif
 	}
 }
 
 void voice_wf_setup_def(struct voice_wf_def_t* wf_def, uint16_t frequency, uint8_t amplitude, uint8_t waveform) {
 	wf_def->amplitude = amplitude;
 	wf_def->period = frequency > 0 ? voice_wf_freq_to_period(frequency) : 0;
-#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_NOISE) || defined(USE_DC)
+#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_DC)
 	wf_def->mode = waveform;
 	if (waveform == VOICE_MODE_TRIANGLE || waveform == VOICE_MODE_SQUARE) {
 		// Half period for square and triangle generators
@@ -258,7 +234,3 @@ void voice_wf_setup_def(struct voice_wf_def_t* wf_def, uint16_t frequency, uint8
 	wf_def->period >>= 1;
 #endif
 }
-
-/*
- * vim: set sw=8 ts=8 noet si tw=72
- */

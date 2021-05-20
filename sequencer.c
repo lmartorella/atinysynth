@@ -83,9 +83,6 @@ void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream,
 	*frame_stream = malloc(sizeof(struct seq_frame_t) * (*frame_count));
 
 	// Now play sequencer data, currently by channel, simulating the timing of the synth.
-#ifdef SUPPORT_MUTE
-	synth.mute = 0;
-#endif
 	synth.enable = 0;
 
 	struct compiler_state_t state;

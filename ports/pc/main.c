@@ -155,9 +155,6 @@ int main(int argc, char** argv) {
 	int voice = 0;
 
 	synth.enable = 0;
-#ifdef SUPPORT_MUTE
-	synth.mute = 0;
-#endif
 
 	memset(synth.voice, 0, sizeof(synth.voice));
 
@@ -230,16 +227,6 @@ int main(int argc, char** argv) {
 			argv++;
 			argc--;
 
-#ifdef SUPPORT_MUTE
-		/* Voice channel muting */
-		} else if (!strcmp(argv[0], "mute")) {
-			int mute = atoi(argv[1]);
-			_DPRINTF("mute mask 0x%02x\n", mute);
-			synth.mute = mute;
-			argv++;
-			argc--;
-#endif
-
 		/* Voice channel enable */
 		} else if (!strcmp(argv[0], "en")) {
 			int en = atoi(argv[1]);
@@ -255,15 +242,6 @@ int main(int argc, char** argv) {
 			_DPRINTF("channel %d mode DC amp=%d\n",
 					voice, amp);
 			voice_wf_set_dc(&poly_voice[voice].wf, amp);
-			argv++;
-			argc--;
-#endif
-#ifdef USE_NOISE
-		} else if (!strcmp(argv[0], "noise")) {
-			int amp = atoi(argv[1]);
-			_DPRINTF("channel %d mode NOISE amp=%d\n",
-					voice, amp);
-			voice_wf_set_noise(&poly_voice[voice].wf, amp);
 			argv++;
 			argc--;
 #endif
@@ -341,31 +319,7 @@ int main(int argc, char** argv) {
 			synth.voice[voice].adsr.def.release_start = ADSR_STATE_SUSTAIN_START + time;
 			argv++;
 			argc--;
-		// } else if (!strcmp(argv[0], "release")) {
-		// 	int time = atoi(argv[1]);
-		// 	_DPRINTF("channel %d ADSR release %d units\n",
-		// 			voice, time);
-		// 	synth.voice[voice].adsr.def.release_time = time;
-		// 	argv++;
-		// 	argc--;
-#ifndef ADSR_FIXED_PEAK_AMP
-		} else if (!strcmp(argv[0], "peak")) {
-			int amp = atoi(argv[1]);
-			_DPRINTF("channel %d ADSR peak amplitude %d\n",
-					voice, amp);
-			poly_voice[voice].adsr.def.peak_amp = amp;
-			argv++;
-			argc--;
-#endif
-#ifndef ADSR_FIXED_SUSTAIN_AMP
-		} else if (!strcmp(argv[0], "samp")) {
-			int amp = atoi(argv[1]);
-			_DPRINTF("channel %d ADSR sustain amplitude %d\n",
-					voice, amp);
-			poly_voice[voice].adsr.def.sustain_amp = amp;
-			argv++;
-			argc--;
-#endif
+
 		} else if (!strcmp(argv[0], "reset")) {
 			_DPRINTF("channel %d reset\n", voice);
 			adsr_reset(&synth.voice[voice].adsr);

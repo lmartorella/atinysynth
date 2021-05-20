@@ -21,7 +21,7 @@
  * MA  02110-1301  USA
  */
 
-#define SYNTH_FREQ		8000
+#define SYNTH_FREQ		4883
 
 /*! Type for time scale, samples per unit. 
  * 16 bits would allow 2^24 samples of maximum note duration and a total duration of 255 time unit.
@@ -29,5 +29,8 @@
  */
 #define TIME_SCALE_T    uint16_t
 #define TIME_SCALE_MAX  UINT16_MAX
+#define CHANNEL_MASK_T  uint8_t
+
+#define VOICE_COUNT 3
 
 #endif

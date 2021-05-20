@@ -46,16 +46,7 @@ struct poly_synth_t {
 	 * Note no bounds checking is done, if you have only defined 4
 	 * channels, then only set bits 0-3, don't set bits 4 onwards here.
 	 */
-	volatile CHANNEL_MASK_T enable;
-#ifdef SUPPORT_MUTE
-	/*!
-	 * Bit-field muting given voices.  This allows for selective adding
-	 * of voices to the overall output.  If a field is 1, then that voice
-	 * channel is not included.  (Note, disabled channels are *also*
-	 * not included.)
-	 */
-	volatile uintptr_t mute;
-#endif
+	CHANNEL_MASK_T enable;
 };
 
 extern struct poly_synth_t synth;
@@ -71,13 +62,7 @@ static inline int8_t poly_synth_next() {
 	do {
 		if (synth.enable & mask) {
 			/* Channel is enabled */
-			int8_t ch_sample = voice_ch_next(voice);
-//			_DPRINTF("poly %p ch=%d out=%d\n",
-//					synth, idx, ch_sample);
-#ifdef SUPPORT_MUTE
-			if (!(synth.mute & mask))
-#endif
-			sample += ch_sample;
+			sample += voice_ch_next(voice);
 			if (voice->adsr.state_counter == ADSR_STATE_DONE) {
 				//_DPRINTF("poly %p ch=%d done\n", synth, idx);
 				synth.enable &= ~mask;
@@ -96,6 +81,3 @@ static inline int8_t poly_synth_next() {
 	return sample;
 };
 #endif
-/*
- * vim: set sw=8 ts=8 noet si tw=72
- */

@@ -52,7 +52,7 @@ struct voice_wf_gen_t {
 	 * (Half period for SQUARE and TRIANGLE)
 	 */
 	uint16_t period;
-#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_NOISE) || defined(USE_DC)
+#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_DC)
 	/*! Waveform generation mode */
 	uint8_t mode;
 #endif
@@ -69,15 +69,12 @@ struct voice_wf_gen_t {
 #ifdef USE_TRIANGLE
 #define VOICE_MODE_TRIANGLE	(3)
 #endif
-#ifdef USE_NOISE
-#define VOICE_MODE_NOISE	(4)
-#endif
 
 /**
  * The Waveform definition. 4 bytes.
  */ 
 struct voice_wf_def_t {
-#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_NOISE) || defined(USE_DC)
+#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_DC)
 	/*! Waveform generation mode, see VOICE_MODE_ enumerated values */
 	uint8_t mode;
 #endif
@@ -112,17 +109,13 @@ void voice_wf_set_sawtooth(struct voice_wf_gen_t* const wf_gen,
 		uint16_t freq, int8_t amplitude);
 #endif
 
+#ifdef USE_TRIANGLE
 /*!
  * Configure the generator for sawtooth wave synthesis.
  */
 void voice_wf_set_triangle(struct voice_wf_gen_t* const wf_gen,
 		uint16_t freq, int8_t amplitude);
-
-/*!
- * Configure the generator for pseudorandom noise synthesis.
- */
-void voice_wf_set_noise(struct voice_wf_gen_t* const wf_gen,
-		int8_t amplitude);
+#endif
 
 /*!
  * Configure the generator using waveform type and common parameters

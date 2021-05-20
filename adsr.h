@@ -93,37 +93,4 @@ void adsr_config(struct adsr_env_gen_t* const adsr, struct adsr_env_def_t* const
  */
 uint8_t adsr_next(struct adsr_env_gen_t* const adsr);
 
-/*!
- * Test to see if the ADSR is done.
- */
-static inline uint8_t adsr_is_done(struct adsr_env_gen_t* const adsr) {
-	return (adsr->state_counter == ADSR_STATE_DONE);
-}
-
-/*!
- * Test to see if the ADSR is awaiting a trigger.
- */
-// static inline uint8_t adsr_is_waiting(struct adsr_env_gen_t* const adsr) {
-// 	return ((adsr->next_event == TIME_SCALE_MAX)
-// 			&& ((adsr->state == ADSR_STATE_DELAY_EXPIRE)
-// 				|| (adsr->state == ADSR_STATE_SUSTAIN_EXPIRE)));
-// }
-
-// /*!
-//  * Test to see if the ADSR is idle.
-//  */
-// static inline uint8_t adsr_is_idle(struct adsr_env_gen_t* const adsr) {
-// 	return (adsr->state == ADSR_STATE_IDLE);
-// }
-
-/*!
- * Tell the ADSR to move onto the next state.
- */
-static inline void adsr_continue(struct adsr_env_gen_t* const adsr) {
-	adsr->next_event = 0;
-}
-
 #endif
-/*
- * vim: set sw=8 ts=8 noet si tw=72
- */
