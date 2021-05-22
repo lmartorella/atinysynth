@@ -10,6 +10,7 @@
       <itemPath>../../voice.h</itemPath>
       <itemPath>../../waveform.h</itemPath>
       <itemPath>poly_cfg.h</itemPath>
+      <itemPath>../../tune_gen.h</itemPath>
     </logicalFolder>
     <logicalFolder name="LinkerScript"
                    displayName="Linker Files"
@@ -22,7 +23,7 @@
       <itemPath>../../sequencer.c</itemPath>
       <itemPath>../../waveform.c</itemPath>
       <itemPath>main.c</itemPath>
-      <itemPath>../../tune_gen.s</itemPath>
+      <itemPath>../../tune_gen.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -41,7 +42,7 @@
         <targetDevice>PIC12F683</targetDevice>
         <targetHeader></targetHeader>
         <targetPluginBoard></targetPluginBoard>
-        <platformTool>noID</platformTool>
+        <platformTool>PICkit3PlatformTool</platformTool>
         <languageToolchain>XC8</languageToolchain>
         <languageToolchainVersion>2.32</languageToolchainVersion>
         <platform>3</platform>

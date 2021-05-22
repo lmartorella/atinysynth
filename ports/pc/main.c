@@ -22,6 +22,7 @@
 #include "debug.h"
 #include "sequencer.h"
 #include "mml.h"
+#include "codegen.h"
 #include <stdio.h>
 #include <string.h>
 #include <ao/ao.h>
@@ -30,37 +31,12 @@ struct poly_synth_t synth;
 
 static int16_t samples[8192];
 static uint16_t samples_sz = 0;
-static void (*feed_channels)(struct poly_synth_t* synth) = NULL;
 static struct seq_frame_t* seq_frame_stream;
 static int current_frame;
 
 /* Read and play a MML file */
 static void mml_error(const char* err, int line, int column) {
 	fprintf(stderr, "Error reading MML file: %s at line %d, pos %d\n", err, line, column);
-}
-
-static int write_source(const char* tune_name, int frame_count) {
-	// Save the compiled output to tune_gen.s (ASM data)
-	FILE *cSrc = fopen("tune_gen.s", "w");
-	if (!cSrc) {
-		fprintf(stderr, "Cannot write the tune_gen.s file\n");
-		return 1;
-	}
-	fprintf(cSrc, "#include <xc.inc>\n\n");
-	fprintf(cSrc, "// Tune: %s\n\n", tune_name);
-	fprintf(cSrc, "psect\ttune, local, class=CODE, merge=1, delta=2\n");
-	fprintf(cSrc, "global\t_tune_data\n\n");
-	fprintf(cSrc, "_tune_data:\n");
-	for (int i = 0; i < frame_count; i++) {
-		fprintf(cSrc, "\tDW\t0x%x, 0x%x, 0x%x\n", 
-			seq_frame_stream[i].wf_period, 
-			seq_frame_stream[i].adsr_time_scale,
-			(seq_frame_stream[i].wf_amplitude << 7) + seq_frame_stream[i].adsr_release_start);
-	}
-	fprintf(cSrc, "\n");
-	printf("File tune_gen.s written\n");
-	fclose(cSrc);
-	return 0;
 }
 
 static int open_mml(const char* name, int* voice_count) {
@@ -91,11 +67,11 @@ static int open_mml(const char* name, int* voice_count) {
 	seq_compile(&map, &seq_frame_stream, &frame_count, voice_count);
 	mml_free(&map);
 	
-	return write_source(name, frame_count);
+	return codegen_write(name, seq_frame_stream, frame_count);
 }
 
-void new_frame_require(struct seq_frame_t* frame) {
-	*frame = seq_frame_stream[current_frame++];
+void new_frame_require() {
+	seq_buf_frame = seq_frame_stream[current_frame++];
 }
 
 int main(int argc, char** argv) {
@@ -149,15 +125,12 @@ int main(int argc, char** argv) {
 			current_frame = 0;
 
 			seq_play_stream(voice_count);
-			feed_channels = seq_feed_synth;
 		}
 		argv++;
 		argc--;
 
 		/* Play out any remaining samples */
-		if (feed_channels) {
-			feed_channels(&synth);
-		}
+		seq_feed_synth();
 
 		if (synth.enable)
 			_DPRINTF("----- Start playback (0x%lx) -----\n",
@@ -176,9 +149,7 @@ int main(int argc, char** argv) {
 				sample_ptr++;
 				samples_sz++;
 				samples_remain--;
-				if (feed_channels) {
-					feed_channels(&synth);
-				}
+				seq_feed_synth();
 			}
 			ao_play(wav_device, (char*)samples, 2*samples_sz);
 

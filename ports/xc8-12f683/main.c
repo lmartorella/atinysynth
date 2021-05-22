@@ -14,14 +14,18 @@
 #include <string.h>
 #include "synth.h"
 #include "sequencer.h"
+#include "tune_gen.h"
     
 struct poly_synth_t synth;
 
-extern const void* tune_data;
-static void* tune_ptr;
+static const struct tune_frame_t* tune_ptr;
 
 void new_frame_require() {
-    
+    seq_buf_frame.adsr_time_scale = tune_adsr_time_scale_refs[tune_ptr->adsr_time_scale];
+    seq_buf_frame.wf_period = tune_wf_period_refs[tune_ptr->wf_period];
+    seq_buf_frame.wf_amplitude = tune_wf_amplitude_refs[tune_ptr->wf_amplitude];
+    seq_buf_frame.adsr_release_start = tune_adsr_release_start_refs[tune_ptr->adsr_release_start];
+    tune_ptr++;
 }
 
 // Creates a SYNTH_FREQ / 4 square wave
@@ -78,7 +82,7 @@ void main() {
     //test_freq();
 
     while (1) {
-        tune_ptr = &tune_data;
+        tune_ptr = tune_data;
         seq_play_stream(SEQ_VOICE_COUNT);
         seq_feed_synth();
 

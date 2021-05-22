@@ -27,13 +27,13 @@
  * Contains the definition of the next waveform and envelope.
  */
 struct seq_frame_t {
-    /*! ADSR time-scale (14-bit max) */
+    /*! ADSR time-scale */
     uint16_t adsr_time_scale;
-    /*! Waveform full period as `sample_freq / frequency`, or zero for pauses (14-bit max) */
+    /*! Waveform full period as `sample_freq / frequency`, or zero for pauses */
     uint16_t wf_period;
-    /*! Waveform amplitude (7-bit wide) */
+    /*! Waveform amplitude */
     uint8_t wf_amplitude;
-    /*! When the release period starts, time units over the ADSR_TIME_UNITS scale (7-bit wide) */
+    /*! When the release period starts, time units over the ADSR_TIME_UNITS scale */
     uint8_t adsr_release_start;
 };
 
