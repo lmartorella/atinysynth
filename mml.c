@@ -49,7 +49,7 @@ static void init_stream_channel(int channel) {
 	frame_map.channels[channel].frames = malloc(sizeof(struct seq_frame_t) * 16);
 }
 
-static uint8_t add_channel_frame(int channel, int frequency, int duration, int volume, double articulation, int waveform) {
+static int add_channel_frame(int channel, int frequency, int duration, int volume, double articulation, int waveform) {
 	if (channel >= frame_map.channel_count) {
 		int old_count = frame_map.channel_count;
 		frame_map.channel_count = channel + 1;
@@ -85,14 +85,13 @@ static uint8_t add_channel_frame(int channel, int frequency, int duration, int v
     }
 
 	// Calc duration and scale
-	TIME_SCALE_T time_scale = duration / ADSR_TIME_UNITS;
-	if (time_scale > 0x3fff) {
-		// Out of range for 7/14-bit packed data
+	int time_scale = (int)round((double)duration / ADSR_TIME_UNITS);
+	if (time_scale > UINT16_MAX) {
 		error_handler("Can't pack frame: adsr time_scale", line, pos);
 		return 0;
 	}
 	frame->adsr_time_scale = time_scale;
-	frame->adsr_release_start = (uint8_t)(ADSR_TIME_UNITS * articulation) - 1; 
+	frame->adsr_release_start = (uint8_t)round(ADSR_TIME_UNITS * articulation) - 1;
 	return 1;
 }
 
@@ -101,7 +100,7 @@ void mml_set_error_handler(void (*handler)(const char* err, int line, int column
 }
 
 /*! Read a single digit from the stream and advance */
-static uint8_t read_digit(const char** str, int* pos) {
+static int read_digit(const char** str, int* pos) {
 	const char code = **str;
 	*str += 1;
 	*pos += 1;
@@ -148,14 +147,14 @@ static int get_duration(int tempo, int length, int dots) {
 	for (; dots > 0; dots--) {
 		l /= 1.5;
 	}
-	return (int)(synth_freq * 60.0 * 4 / tempo / l);
+	return (int)round(synth_freq * 60.0 * 4 / tempo / l);
 }
 
 /*! Parser state, per channel */
 struct mml_channel_state_t {
-	uint8_t octave;
-	int defaultLength;
-	int defaultLengthDot;
+	int octave;
+	int default_length;
+	int default_length_dot;
 	int tempo;
 	int volume;
 	double articulation;
@@ -172,8 +171,8 @@ static void enable_channel(int channel) {
 		mml_channel_states = realloc(mml_channel_states, sizeof(struct mml_channel_state_t) * mml_channel_count);
 		// Init new channel
 		mml_channel_states[channel].octave = 4;
-		mml_channel_states[channel].defaultLength = 4;
-		mml_channel_states[channel].defaultLengthDot = 0;
+		mml_channel_states[channel].default_length = 4;
+		mml_channel_states[channel].default_length_dot = 0;
 		mml_channel_states[channel].tempo = 120;
 		mml_channel_states[channel].volume = 63;
 		mml_channel_states[channel].articulation = ARTICULATION_NORMAL;
@@ -281,8 +280,8 @@ static int mml_parse(const char* content) {
 			}
 			for (int i = 0; i < mml_channel_count; i++) {
 				if (mml_channel_states[i].isActive) {
-					mml_channel_states[i].defaultLength = length;
-					mml_channel_states[i].defaultLengthDot = dot;
+					mml_channel_states[i].default_length = length;
+					mml_channel_states[i].default_length_dot = dot;
 				}
 			}
 		} else if (code == 't') {
@@ -449,7 +448,7 @@ static int mml_parse(const char* content) {
 						isPause = 1;
 					}
 					int frequency = isPause ? 0 : (isNoteCode ? get_freq_from_code(noteCode) : get_freq_from_note(code, sharp, mml_channel_states[i].octave));
-					int duration = get_duration(mml_channel_states[i].tempo, length < 0 ? mml_channel_states[i].defaultLength : length, (length < 0 && !dot) ? mml_channel_states[i].defaultLengthDot : dot);
+					int duration = get_duration(mml_channel_states[i].tempo, length < 0 ? mml_channel_states[i].default_length : length, (length < 0 && !dot) ? mml_channel_states[i].default_length_dot : dot);
 					if (!add_channel_frame(i, frequency, duration, mml_channel_states[i].volume, mml_channel_states[i].articulation, mml_channel_states[i].waveform)) {
 						return 1;
 					}

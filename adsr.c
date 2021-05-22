@@ -28,7 +28,9 @@
 void adsr_config(struct adsr_env_gen_t* const adsr, struct seq_frame_t* const frame) {
 	adsr->def.release_start = frame->adsr_release_start;
 	adsr->def.time_scale = frame->adsr_time_scale;
-	adsr_reset(adsr);
+	adsr->next_event = adsr->def.time_scale - 1;
+	adsr->state_counter = ADSR_STATE_INIT;
+	adsr->gain = 8;
 }
 
 /*!
@@ -37,43 +39,35 @@ void adsr_config(struct adsr_env_gen_t* const adsr, struct seq_frame_t* const fr
 uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
 	if (adsr->next_event) {
 		/* Still waiting for next event */
-		//if (adsr->next_event != TIME_SCALE_MAX)
-			adsr->next_event--;
+		adsr->next_event--;
 		_DPRINTF("adsr=%p gain=%d next_in=%d\n",
 				adsr, adsr->gain, adsr->next_event);
 		return adsr->gain;
 	}
 	
-	/*
-	 * We use if statements here since we might want to jump
-	 * between states.  This lets us do that more easily.
+	/**
+	 * Attack = gain from 7 to 0
 	 */
-	if (adsr->state_counter < ADSR_STATE_DECAY_START) {
-		adsr->gain = 7 - (adsr->state_counter >> 1);
+	if (adsr->state_counter < ADSR_STATE_SUSTAIN_START) {
+		adsr->gain = 7 - adsr->state_counter;
 	} 
 	
-	else if (adsr->state_counter < ADSR_STATE_SUSTAIN_START) {
-		// from gain 0 to 1 (sustain)
-		adsr->gain = (adsr->state_counter - ADSR_STATE_DECAY_START) >> 3;
-	} 
-	
+	// Then decay to 1
 	else if (adsr->state_counter < adsr->def.release_start) {
-		adsr->gain = 2;
+		adsr->gain = 1;
 	}
 
 	else if (adsr->state_counter < adsr->def.release_start + ADSR_STATE_RELEASE_DURATION) {
-		// From 2 to 5
-		adsr->gain = ((adsr->state_counter - adsr->def.release_start) >> 2) + 2;
+		// From 2 to 8
+		adsr->gain = (adsr->state_counter - adsr->def.release_start) + 2;
 	}
 
+	// Then remain mute until ADSR_STATE_DONE
 	else {
-		_DPRINTF("adsr=%p RELEASE EXPIRE\n", adsr);
-
-		/* Mute channel */
 		adsr->gain = 8;
 	}
 
-	adsr->next_event = adsr->def.time_scale;
+	adsr->next_event = adsr->def.time_scale - 1;
 	adsr->state_counter++;
 	return adsr->gain;
 }

@@ -24,15 +24,14 @@
 #include "sequencer.h"
 #include <stdint.h>
 
+#define ADSR_TIME_UNITS 0x40
+
 /* ADSR states, in time units. MAX_TIME_UNIT is fixed, and terminates the envelope */
 #define ADSR_STATE_INIT     		0x00
-#define ADSR_STATE_DECAY_START		0x10
-#define ADSR_STATE_SUSTAIN_START	0x20
+#define ADSR_STATE_SUSTAIN_START	0x08
 // Release start is dynamic
-#define ADSR_STATE_RELEASE_DURATION 0x10
-#define ADSR_STATE_DONE				0x7f
-
-#define ADSR_TIME_UNITS (ADSR_STATE_DONE + 1)
+#define ADSR_STATE_RELEASE_DURATION 0x06
+#define ADSR_STATE_DONE				ADSR_TIME_UNITS
 
 #include "poly_cfg.h"
 
@@ -59,30 +58,6 @@ struct adsr_env_gen_t {
 	/*! Present gain (0 is max, 1 is half, etc...) */
 	uint8_t gain;
 };
-
-/*!
- * Reset the ADSR state ready for the next note.
- */
-static inline void adsr_reset(struct adsr_env_gen_t* const adsr) {
-	adsr->next_event = 0;
-	adsr->state_counter = ADSR_STATE_INIT;
-	_DPRINTF("adsr=%p INIT time_scale=%d "
-			"delay_time=%d "
-			"attack_time=%d "
-			"decay_time=%d "
-			"sustain_time=%d "
-			"release_time=%d "
-			"peak_amp=%d "
-			"sustain_amp=%d\n",
-			adsr, adsr->time_scale,
-			adsr->delay_time,
-			adsr->attack_time,
-			adsr->decay_time,
-			adsr->sustain_time,
-			adsr->release_time,
-			adsr->peak_amp,
-			adsr->sustain_amp);
-}
 
 /*!
  * Configure the ADSR.
