@@ -73,10 +73,17 @@ static inline int8_t poly_synth_next() {
 	} while (mask);
 
 	/* Handle clipping */
-	if (sample > INT8_MAX)
+	if (sample > INT8_MAX) {
 		sample = INT8_MAX;
-	else if (sample < INT8_MIN)
+#ifdef CHECK_CLIPPING
+		clip_count++;
+#endif
+	} else if (sample < INT8_MIN) {
 		sample = INT8_MIN;
+#ifdef CHECK_CLIPPING
+		clip_count++;
+#endif
+	}
 	return sample;
 };
 #endif

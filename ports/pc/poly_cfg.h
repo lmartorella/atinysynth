@@ -33,4 +33,7 @@
 
 #define VOICE_COUNT 8
 
+#define CHECK_CLIPPING
+extern int clip_count;
+
 #endif

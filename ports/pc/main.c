@@ -33,6 +33,7 @@ static int16_t samples[8192];
 static uint16_t samples_sz = 0;
 static struct seq_frame_t* seq_frame_stream;
 static int current_frame;
+int clip_count = 0;
 
 /* Read and play a MML file */
 static void mml_error(const char* err, int line, int column) {
@@ -125,6 +126,10 @@ int main(int argc, char** argv) {
 			current_frame = 0;
 
 			seq_play_stream(voice_count);
+
+			if (clip_count) {
+				printf("! clip count: %d\n", clip_count);
+			}
 		}
 		argv++;
 		argc--;

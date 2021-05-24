@@ -11,7 +11,7 @@ const uint16_t tune_wf_period_refs[] = {
 };
 
 const uint8_t tune_wf_amplitude_refs[] = {
-	0x0, 0x3f, 
+	0x0, 0x2a, 
 };
 
 const uint8_t tune_adsr_release_start_refs[] = {
