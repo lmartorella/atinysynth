@@ -37,7 +37,7 @@ extern const uint16_t __attribute__((weak)) synth_freq;
  */
 struct poly_synth_t {
 	/*! Pointer to voices.  There may be up to 16 voices referenced. */
-	struct voice_ch_t* voice;
+	struct voice_ch_t voice[VOICE_COUNT];
 	/*!
 	 * Bit-field enabling given voices.  This allows selective turning
 	 * on and off of given voice channels.  If the corresponding bit is
@@ -46,51 +46,44 @@ struct poly_synth_t {
 	 * Note no bounds checking is done, if you have only defined 4
 	 * channels, then only set bits 0-3, don't set bits 4 onwards here.
 	 */
-	volatile uintptr_t enable;
-	/*!
-	 * Bit-field muting given voices.  This allows for selective adding
-	 * of voices to the overall output.  If a field is 1, then that voice
-	 * channel is not included.  (Note, disabled channels are *also*
-	 * not included.)
-	 */
-	volatile uintptr_t mute;
+	CHANNEL_MASK_T enable;
 };
+
+extern struct poly_synth_t synth;
 
 /*!
  * Compute the next synthesizer sample.
  */
-static inline int8_t poly_synth_next(struct poly_synth_t* const synth) {
+static inline int8_t poly_synth_next() {
 	int16_t sample = 0;
-	uintptr_t mask = 1;
-	uint8_t idx = 0;
+	CHANNEL_MASK_T mask = 1 << (VOICE_COUNT - 1);
+    struct voice_ch_t* voice = &synth.voice[VOICE_COUNT - 1];
 
-	while (mask) {
-		if (synth->enable & mask) {
+	do {
+		if (synth.enable & mask) {
 			/* Channel is enabled */
-			int8_t ch_sample = voice_ch_next(
-					&(synth->voice[idx]));
-			_DPRINTF("poly %p ch=%d out=%d\n",
-					synth, idx, ch_sample);
-			if (!(synth->mute & mask))
-				sample += ch_sample;
-			if (voice_ch_is_done(&synth->voice[idx])) {
-				_DPRINTF("poly %p ch=%d done\n", synth, idx);
-				synth->enable &= ~mask;
-				adsr_reset(&synth->voice[idx].adsr);
+			sample += voice_ch_next(voice);
+			if (voice->adsr.state_counter == ADSR_STATE_DONE) {
+				//_DPRINTF("poly %p ch=%d done\n", synth, idx);
+				synth.enable &= ~mask;
 			}
 		}
-		idx++;
-		mask <<= 1;
-	}
+		mask >>= 1;
+        voice--;
+	} while (mask);
 
 	/* Handle clipping */
-	if (sample > INT8_MAX)
+	if (sample > INT8_MAX) {
 		sample = INT8_MAX;
-	else if (sample < INT8_MIN)
+#ifdef CHECK_CLIPPING
+		clip_count++;
+#endif
+	} else if (sample < INT8_MIN) {
 		sample = INT8_MIN;
+#ifdef CHECK_CLIPPING
+		clip_count++;
+#endif
+	}
 	return sample;
 };
 #endif
-/*
- * vim: set sw=8 ts=8 noet si tw=72
- */

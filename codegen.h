@@ -1,9 +1,6 @@
-#ifndef _POLY_CFG_H
-#define _POLY_CFG_H
-
 /*!
- * Polyphonic synthesizer for microcontrollers.
- * (C) 2016 Stuart Longland
+ * Tune compressor and code generator for Polyphonic synthesizer for microcontrollers.
+ * (C) 2021 Luciano Martorella
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,14 +17,12 @@
  * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
  * MA  02110-1301  USA
  */
+#ifndef _CODEGEN_H
+#define _CODEGEN_H
 
-#define SYNTH_FREQ		8000
+#include "sequencer.h"
 
-/*! Type for time scale, samples per unit. 
- * 16 bits would allow 2^24 samples of maximum note duration and a total duration of 255 time unit.
- * This means ~2000 seconds on 8Khz.
- */
-#define TIME_SCALE_T    uint16_t
-#define TIME_SCALE_MAX  UINT16_MAX
+/*! Write the source code with the stream data */
+int codegen_write(const char* tune_name, struct seq_frame_t* frame_stream, int frame_count);
 
 #endif

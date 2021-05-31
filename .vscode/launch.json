@@ -5,11 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "gcc-8 - Build and debug active file",
+            "name": "Compile",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/bin/pc/synth",
-            "args": ["script", "ports/pc/test"],
+            "args": ["compile-mml", "resources/loreley.mml"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
