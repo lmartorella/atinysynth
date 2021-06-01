@@ -5,9 +5,9 @@ This project is intended to be a polyphonic sequencer for use in
 embedded 8-bit microcontrollers.  It features multi-voice synthesis for
 multiple channels.
 
-This is a fork of the [sjlongland/atinysynth](https://github.com/sjlongland/atinysynth/) project, optimized for the tiny PIC12F683 Microchip microcontroller.
+This is a fork of the [sjlongland/atinysynth](https://github.com/sjlongland/atinysynth/) project for AT AVR MCUs, but oriented and optimized for the tiny PIC12F683 Microchip microcontroller.
 
-The goal is to implement a polyphonic tune player in only 2K instructions (containing the tune data) and 128 bytes of RAM.
+The goal is to implement a polyphonic tune player in only 2K instructions (containing the code *and* the tune data) and to stay in 128 bytes of RAM.
 
 Yes. 
 
@@ -26,8 +26,7 @@ The only waveform implemented in this fork is the square wave.
 
 Refer the main [sjlongland/atinysynth](https://github.com/sjlongland/atinysynth/) project for principle of operation.
 
-
-# Sequencer
+## Sequencer
 
 Since the synthesizer state machine is effective in defining when a "note" envelope is terminated, it is then possible to store all the subsequent "notes" in a stream of consecutive *steps*. Each step contains a pair of waveform settings and ADSR settings. 
 
@@ -39,7 +38,7 @@ In order to arrange the steps of all the channels in the correct sequence, a *se
 
 This compiler is not optimized to run on a microcontroller (it requires dynamic memory allocation), but to be run on a PC in order to obtain compact binary files to be played by the sequencer on the host MCU.
 
-To save memory for the tiniest 8-bit microcontrollers, the sequencer stream header and the steps are defined in a compact 8-bit binary format:
+To save memory for the tiniest 8-bit microcontrollers, the sequencer stream header and the steps are defined in a compact binary format:
 
 ```
 // A frame
@@ -57,41 +56,127 @@ In order to save computational-demanding 16-bit division operations on 8-bit tar
 
 This requires the sequencer compiler to known in advance the target sampling rate.
 
-For this reason, a stream header contains the information to avoid issues during reproduction:
+## Banning *mul*s
 
+The free version of the XC8 compiler (like any other non-optimized compiler for CPUs without native addressing with displacement) would produce the `_bmul` software implementation when a for-loop is written in this manner:
+
+```c
+uint8_t i = 0;
+for (; i < MAX; i++) { 
+    // ....
+    consume(synth.voice[i].adsr);
+}
 ```
-struct seq_stream_header_t {
-    /*! Sampling frequency required for correct timing */
-    uint16_t synth_frequency;
-    /*! Size of a single frame in bytes */
-    uint8_t frame_size;
-    /*! Number of voices */
-    uint8_t voices;
-    /*! Total frame count */
-    uint16_t frames;
-    /*! Follow frames data, as stream of seq_frame_t */
+
+The multiplication is used to compute the displacement of the target voice, and it is especially slow if the size of the `struct voice_ch_t` is not a power of 2.
+
+The same for-loop above written as:
+
+```c
+uint8_t i = 0;
+struct voice_ch_t* ptr = &synth.voice[0];
+for (; i < MAX; i++, ptr++) { 
+    // ....
+    consume(ptr->adsr);
+}
+```
+is insanely faster (since it is implemented with simply additions and a temporary 8-bit pointer variable), and will save code space not producing the `_bmul` implementation.
+
+Now the remaining integer multiplication is the original ADSR modulation:
+
+```c
+uint8_t amplitude = adsr_next(&(voice->adsr));
+// Upscale...
+int16_t value = voice_wf_next(&(voice->wf));
+// 16-bit integer mul
+value *= amplitude;
+// and then division by 256
+value >>= 8;
+```
+
+This above happens for each voice for each sample.
+
+A clever way to optimize this is to follow the natural logarithmic scale of the human hearing, and use exponential gain instead of linear ones. With this approximation, the gain can be seen as a number of bit shifts:
+
+```c
+uint8_t gain = adsr_next(&(voice->adsr));
+int8_t value = voice_wf_next(&(voice->wf));
+// 8-bit domain again!
+value >>= gain;
+```
+
+<img src="./doc/wave.png" alt="waveform" width="300px">
+
+The approximation, so evident and ugly in the linear scale, is not actually so bad once played through a speaker.
+
+## Bit compressor
+
+After the sequencer produced the stream of frames, now we need to squeeze it even more to fit in the code EEPROM (2K words of 14 bits).
+
+Unfortunately the base level PIC12 doesn't expose any instructions to access to code memory at runtime. So packing the stream in 14-bits words is not an option.
+
+However, the XC8 compiler is great in implementing constant array of values in code memory, using the 'Computed GOTO' technique as described in the Microchip datasheet and hardcoded `RETLW` instructions.
+
+With that, it is possible to put constant data packed as bytes in the code memory.
+
+So the goal is to reduce the frame packet in - say - 2 bytes each, adding only a little bit more of computational required at runtime.
+
+Analyizing the frame structure of a typical tune, we can say that the total _number_ of different notes and lengths is very less than the length of the whole tune.
+
+So the compressor stage is simply mapping all the possible notes, lengths, and other frame definition values in tables that will be used to deferencing the real value.
+
+The result is then produced _as direct C source for XC8_. Here an example:
+
+```c
+// Tune: resources/scale.mml
+
+struct tune_frame_t {
+	uint8_t adsr_time_scale : 2;
+	uint8_t wf_period : 4;
+	uint8_t wf_amplitude : 1;
+	uint8_t adsr_release_start : 2;
+};
+
+const uint16_t tune_adsr_time_scale_refs[] = {
+	0x0, 0x7d, 0x1f4, 
+};
+
+const uint16_t tune_wf_period_refs[] = {
+	0x0, 0x1e9, 0x207, 0x225, 0x245, 0x268, 0x28e, 0x2b5, 0x2dd, 0x30a, 0x337, 0x369, 0x39c, 0x3d4, 
+};
+
+const uint8_t tune_wf_amplitude_refs[] = {
+	0x0, 0x78, 
+};
+
+const uint8_t tune_adsr_release_start_refs[] = {
+	0x0, 0x2f, 0x37, 0x3f, 
+};
+
+const struct tune_frame_t tune_data[] = {
+	{ 1, 13, 1, 2 },
+	{ 1, 12, 1, 2 },
+	{ 1, 11, 1, 2 },
+	{ 1, 10, 1, 2 },
+	{ 1, 9, 1, 2 },
+	{ 1, 8, 1, 2 },
+	{ 1, 7, 1, 2 },
+	{ 1, 6, 1, 2 },
+	{ 1, 5, 1, 2 },
+	{ 1, 4, 1, 2 },
+	{ 1, 3, 1, 2 },
+	{ 1, 2, 1, 2 },
+	[...]
 };
 ```
 
-The `frame_size` field is useful when the code in the target microcontroller is compiled with different setting (e.g. different time scale, or different set of features that requires less data, like no Attack/Decay, etc...).
+So the `scale.mml` example only uses two different amplitudes, plus the 0x0 used by pauses, so it requires 2 bits per frames.
 
-### Typical usage
+The note periods require 4 bits, the ADSR envelope only 2 (only 3 different envelope used), etc..
 
-The sequencer can be fed via a callback, in order to support serial read for example from serial EEPROM or streams.
+The total size of a packet dropped now to 9 bits. Without any other complex bit-level stream manipulation, the XC8 compiler will layout the necessary code to push the tune data in EEPROM (alongside with the ref tables), requiring only 2 bytes per notes.
 
-```c
-/*! Requires a new frame. The handler must return 1 if a new frame was acquired, or zero if EOF */
-void seq_set_stream_require_handler(uint8_t (*handler)(struct seq_frame_t* frame));
-
-/*! 
- * Plays a stream sequence of frames, in the order requested by the synth.
- * The frames must then be sorted in the same fetch order and not in channel order.
- */
-int seq_play_stream(const struct seq_stream_header_t* stream_header, uint8_t voice_count, struct poly_synth_t* synth);
-
-/*! Use it when `seq_play_stream` is in use, one call per sample */
-void seq_feed_synth(struct poly_synth_t* synth);
-```
+# Appendixes
 
 ## MML compiler
 
