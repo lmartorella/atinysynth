@@ -85,8 +85,8 @@ void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream,
 		}
 	}
 
-	// Prepare output buffer, with total frame count, plus ending frame
-	*frame_count = total_frame_count + 1;
+	// Prepare output buffer, with total frame count
+	*frame_count = total_frame_count;
 	*voice_count = valid_channel_count;
 	*frame_stream = malloc(sizeof(struct seq_frame_t) * (*frame_count));
 
@@ -105,10 +105,7 @@ void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream,
 		poly_synth_next();
 		seq_feed_channels(&state);
 	}
-    
-    // Add end frame (zero)
-    memset((*frame_stream) + total_frame_count, 0, sizeof(struct seq_frame_t));
-    
+       
 	free(state.channel_positions);
 }
 

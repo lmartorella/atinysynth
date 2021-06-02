@@ -19,13 +19,17 @@
 struct poly_synth_t synth;
 
 static const struct tune_frame_t* tune_ptr;
+static const struct tune_frame_t* tune_ptr_end;
 
 void new_frame_require() {
     seq_buf_frame.adsr_time_scale = tune_adsr_time_scale_refs[tune_ptr->adsr_time_scale];
     seq_buf_frame.wf_period = tune_wf_period_refs[tune_ptr->wf_period];
-    seq_buf_frame.wf_amplitude = tune_wf_amplitude_refs[tune_ptr->wf_amplitude];
-    seq_buf_frame.adsr_release_start = tune_adsr_release_start_refs[tune_ptr->adsr_release_start];
+    seq_buf_frame.wf_amplitude = tune_wf_amplitude_refs[0];
+    seq_buf_frame.adsr_release_start = tune_adsr_release_start_refs[0];
     tune_ptr++;
+    if (tune_ptr == tune_ptr_end) {
+        seq_buf_frame.adsr_time_scale = 0;
+    }
 }
 
 // Creates a SYNTH_FREQ / 4 square wave
@@ -83,6 +87,7 @@ void main() {
 
     while (1) {
         tune_ptr = tune_data;
+        tune_ptr_end = tune_data + TUNE_DATA_COUNT;
         seq_play_stream(SEQ_VOICE_COUNT);
         seq_feed_synth();
 

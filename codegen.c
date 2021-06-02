@@ -114,10 +114,18 @@ int codegen_write(const char* tune_name, struct seq_frame_t* frame_stream, int f
 	fprintf(hSrc, "// Tune: %s\n\n", tune_name);
 
     fprintf(hSrc, "struct tune_frame_t {\n");
-    fprintf(hSrc, "\tuint8_t adsr_time_scale : %d;\n", dist_adsr_time_scale.bit_count);
-    fprintf(hSrc, "\tuint8_t wf_period : %d;\n", dist_wf_period.bit_count);
-    fprintf(hSrc, "\tuint8_t wf_amplitude : %d;\n", dist_wf_amplitude.bit_count);
-    fprintf(hSrc, "\tuint8_t adsr_release_start : %d;\n", dist_adsr_release_start.bit_count);
+	if (dist_adsr_time_scale.bit_count) {
+    	fprintf(hSrc, "\tuint8_t adsr_time_scale : %d;\n", dist_adsr_time_scale.bit_count);
+	}
+	if (dist_wf_period.bit_count) {
+    	fprintf(hSrc, "\tuint8_t wf_period : %d;\n", dist_wf_period.bit_count);
+	}
+	if (dist_wf_amplitude.bit_count) {
+    	fprintf(hSrc, "\tuint8_t wf_amplitude : %d;\n", dist_wf_amplitude.bit_count);
+	}
+	if (dist_adsr_release_start.bit_count) {
+    	fprintf(hSrc, "\tuint8_t adsr_release_start : %d;\n", dist_adsr_release_start.bit_count);
+	}
 	fprintf(hSrc, "};\n\n");
 
     fprintf(hSrc, "extern const uint16_t tune_adsr_time_scale_refs[];\n");
@@ -125,6 +133,8 @@ int codegen_write(const char* tune_name, struct seq_frame_t* frame_stream, int f
     fprintf(hSrc, "extern const uint8_t tune_wf_amplitude_refs[];\n");
     fprintf(hSrc, "extern const uint8_t tune_adsr_release_start_refs[];\n");
     fprintf(hSrc, "extern const struct tune_frame_t tune_data[];\n");
+
+	fprintf(hSrc, "\n#define TUNE_DATA_COUNT %d\n\n", frame_count);
 
 	printf("File tune_gen.h written\n");
 	fclose(hSrc);
@@ -143,14 +153,22 @@ int codegen_write(const char* tune_name, struct seq_frame_t* frame_stream, int f
     distribution_codegen(cSrc, "tune_wf_amplitude_refs", "uint8_t", &dist_wf_amplitude);
     distribution_codegen(cSrc, "tune_adsr_release_start_refs", "uint8_t", &dist_adsr_release_start);
 
-    fprintf(cSrc, "const struct tune_frame_t tune_data[] = {\n");
+    fprintf(cSrc, "const struct tune_frame_t tune_data[TUNE_DATA_COUNT] = {\n");
 	for (int i = 0; i < frame_count; i++) {
-		fprintf(cSrc, "\t{ %d, %d, %d, %d },\n", 
-            dist_adsr_time_scale.map_of_refs[frame_stream[i].adsr_time_scale],
-            dist_wf_period.map_of_refs[frame_stream[i].wf_period],
-            dist_wf_amplitude.map_of_refs[frame_stream[i].wf_amplitude],
-            dist_adsr_release_start.map_of_refs[frame_stream[i].adsr_release_start]
-        );
+		fprintf(cSrc, "\t{ ");
+		if (dist_adsr_time_scale.bit_count) {
+			fprintf(cSrc, "%d, ", dist_adsr_time_scale.map_of_refs[frame_stream[i].adsr_time_scale]);
+		}
+		if (dist_wf_period.bit_count) {
+            fprintf(cSrc, "%d, ", dist_wf_period.map_of_refs[frame_stream[i].wf_period]);
+		}
+		if (dist_wf_amplitude.bit_count) {
+            fprintf(cSrc, "%d, ", dist_wf_amplitude.map_of_refs[frame_stream[i].wf_amplitude]);
+		}
+		if (dist_adsr_release_start.bit_count) {
+            fprintf(cSrc, "%d, ", dist_adsr_release_start.map_of_refs[frame_stream[i].adsr_release_start]);
+		}
+		fprintf(cSrc, " },\n");
 	}
 
 	fprintf(cSrc, "};\n\n");
