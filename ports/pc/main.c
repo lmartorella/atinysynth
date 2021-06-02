@@ -33,6 +33,7 @@ static int16_t samples[8192];
 static uint16_t samples_sz = 0;
 static struct seq_frame_t* seq_frame_stream;
 static int current_frame;
+static int frame_count;
 
 /* Read and play a MML file */
 static void mml_error(const char* err, int line, int column) {
@@ -64,7 +65,6 @@ static int process_mml(const char* name, int* voice_count) {
 	int channel_count = map.channel_count;
 
 	// Sort frames in stream
-	int frame_count;
 	int do_clip_check;
 	seq_compile(&map, &seq_frame_stream, &frame_count, voice_count, &do_clip_check);
 	mml_free(&map);
@@ -74,6 +74,9 @@ static int process_mml(const char* name, int* voice_count) {
 
 void new_frame_require() {
 	seq_buf_frame = seq_frame_stream[current_frame++];
+	if (current_frame >= frame_count) {
+		seq_buf_frame.adsr_time_scale = 0;
+	}
 }
 
 int main(int argc, char** argv) {
