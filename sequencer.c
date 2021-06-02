@@ -25,10 +25,10 @@
 #include <string.h>
 
 /*! State used between `seq_play_stream` and `seq_feed_synth` */
-#ifndef SEQ_VOICE_COUNT
+#ifndef SEQ_CHANNEL_COUNT
 static uint8_t seq_voice_count;
 #else
-#define seq_voice_count SEQ_VOICE_COUNT
+#define seq_voice_count SEQ_CHANNEL_COUNT
 #endif
 uint8_t end = 0;
 
@@ -109,10 +109,16 @@ void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream,
 	free(state.channel_positions);
 }
 
+#ifndef SEQ_CHANNEL_COUNT
 void seq_play_stream(uint8_t voices) {
-#ifndef SEQ_VOICE_COUNT
+#else
+void seq_play_stream() {
+#endif
+
+#ifndef SEQ_CHANNEL_COUNT
 	seq_voice_count = voices;
 #endif
+
 	// Disable all channels
 	synth.enable = 0;
     end = 0;

@@ -62,13 +62,14 @@ static int open_mml(const char* name, int* voice_count) {
 		return err;
 	}
 	free(content);
+	int channel_count = map.channel_count;
 
 	// Sort frames in stream
 	int frame_count;
 	seq_compile(&map, &seq_frame_stream, &frame_count, voice_count);
 	mml_free(&map);
 	
-	return codegen_write(name, seq_frame_stream, frame_count);
+	return codegen_write(name, seq_frame_stream, frame_count, channel_count);
 }
 
 void new_frame_require() {

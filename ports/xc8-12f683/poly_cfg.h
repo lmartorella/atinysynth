@@ -32,6 +32,5 @@
 #define CHANNEL_MASK_T  uint8_t
 
 #define VOICE_COUNT 3
-#define SEQ_VOICE_COUNT 3
 
 #endif

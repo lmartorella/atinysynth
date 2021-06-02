@@ -42,7 +42,11 @@ struct seq_frame_t {
  * The frames must then be sorted in the same fetch order and not in channel order.
  * Frames will be fed using the handler passed by `new_frame_require`.
  */
+#ifndef SEQ_CHANNEL_COUNT
 void seq_play_stream(uint8_t voices);
+#else
+void seq_play_stream();
+#endif
 
 /*! Requires a new frame. The call never fails. Returns a zero frame at the end of the stream, or if EOF */
 extern struct seq_frame_t seq_buf_frame;

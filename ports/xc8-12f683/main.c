@@ -88,7 +88,7 @@ void main() {
     while (1) {
         tune_ptr = tune_data;
         tune_ptr_end = tune_data + TUNE_DATA_COUNT;
-        seq_play_stream(SEQ_VOICE_COUNT);
+        seq_play_stream(SEQ_CHANNEL_COUNT);
         seq_feed_synth();
 
         while (synth.enable) {
