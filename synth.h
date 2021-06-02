@@ -68,7 +68,7 @@ static inline int8_t poly_synth_next() {
 		if (synth.enable & mask) {
 			/* Channel is enabled */
 			sample += voice_ch_next(voice);
-			if (voice->adsr.state_counter == ADSR_STATE_DONE) {
+			if (!voice->adsr.state_counter) {
 				//_DPRINTF("poly %p ch=%d done\n", synth, idx);
 				synth.enable &= ~mask;
 			}
