@@ -55,7 +55,12 @@ extern struct poly_synth_t synth;
  * Compute the next synthesizer sample.
  */
 static inline int8_t poly_synth_next() {
+#ifndef NO_CLIP_CHECK
 	int16_t sample = 0;
+#else
+	int8_t sample = 0;
+#endif
+
 	CHANNEL_MASK_T mask = 1 << (VOICE_COUNT - 1);
     struct voice_ch_t* voice = &synth.voice[VOICE_COUNT - 1];
 
@@ -73,6 +78,7 @@ static inline int8_t poly_synth_next() {
 	} while (mask);
 
 	/* Handle clipping */
+#ifndef NO_CLIP_CHECK
 	if (sample > INT8_MAX) {
 		sample = INT8_MAX;
 #ifdef CHECK_CLIPPING
@@ -82,6 +88,7 @@ static inline int8_t poly_synth_next() {
 		sample = INT8_MIN;
 #ifdef CHECK_CLIPPING
 		clip_count++;
+#endif
 #endif
 	}
 	return sample;

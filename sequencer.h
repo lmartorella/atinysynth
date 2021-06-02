@@ -78,7 +78,7 @@ struct seq_frame_map_t {
 }; 
 
 /*! Compile/reorder a frame-map (by channel) to a sequential stream */
-void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream, int* frame_count, int* voice_count);
+void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream, int* frame_count, int* voice_count, int* do_clip_check);
 
 /*! Free the stream allocated by `seq_compile`. */
 void seq_free(struct seq_frame_t* seq_frame_stream);

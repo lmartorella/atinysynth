@@ -21,6 +21,7 @@
 #include "debug.h"
 #include "sequencer.h"
 #include "synth.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -31,6 +32,7 @@ static uint8_t seq_voice_count;
 #define seq_voice_count SEQ_CHANNEL_COUNT
 #endif
 uint8_t end = 0;
+int clip_count = 0;
 
 struct seq_frame_t seq_buf_frame;
 
@@ -79,7 +81,7 @@ static void seq_feed_channels(struct compiler_state_t* state) {
 	}
 }
 
-void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream, int* frame_count, int* voice_count) {
+void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream, int* frame_count, int* voice_count, int* do_clip_check) {
 	int total_frame_count = 0;
 	// Skip empty channels
 	int valid_channel_count = 0;
@@ -109,6 +111,13 @@ void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream,
 	while (synth.enable) {
 		poly_synth_next();
 		seq_feed_channels(&state);
+	}
+
+	printf("Compiler stats:\n");
+	if (clip_count) {
+		printf("\tWARN: clip count: %d (slower)\n", clip_count);
+	} else {
+		printf("\tno clip (faster)\n");
 	}
 
 	free(state.channels);

@@ -100,7 +100,7 @@ static void codegen_compress_stream(struct seq_frame_t* frame_stream, int frame_
 	distribution_calc(&dist_adsr_release_start);
 }
 
-int codegen_write(const char* tune_name, struct seq_frame_t* frame_stream, int frame_count, int channel_count) {
+int codegen_write(const char* tune_name, struct seq_frame_t* frame_stream, int frame_count, int channel_count, int has_clip) {
     codegen_compress_stream(frame_stream, frame_count);
 
     // Prepare the header for tune_gen.h (with dynamic bit sizes)
@@ -132,10 +132,13 @@ int codegen_write(const char* tune_name, struct seq_frame_t* frame_stream, int f
     fprintf(hSrc, "extern const uint16_t tune_wf_period_refs[];\n");
     fprintf(hSrc, "extern const uint8_t tune_wf_amplitude_refs[];\n");
     fprintf(hSrc, "extern const uint8_t tune_adsr_release_start_refs[];\n");
-    fprintf(hSrc, "extern const struct tune_frame_t tune_data[];\n");
+    fprintf(hSrc, "extern const struct tune_frame_t tune_data[];\n\n");
 
-	fprintf(hSrc, "\n#define TUNE_DATA_COUNT %d\n\n", frame_count);
-	fprintf(hSrc, "\n#define SEQ_CHANNEL_COUNT %d\n\n", channel_count);
+	fprintf(hSrc, "#define TUNE_DATA_COUNT %d\n", frame_count);
+	if (!has_clip) {
+		fprintf(hSrc, "#define NO_CLIP_CHECK\n");
+	}
+	fprintf(hSrc, "#define SEQ_CHANNEL_COUNT %d\n\n", channel_count);
 
 	printf("File tune_gen.h written\n");
 	fclose(hSrc);
