@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/bin/pc/synth",
-            "args": ["compile-mml", "resources/loreley.mml"],
+            "args": ["compile-mml", "resources/tetris.mml"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
