@@ -14,5 +14,6 @@ extern const uint8_t tune_adsr_release_start_refs[];
 extern const struct tune_frame_t tune_data[];
 
 #define TUNE_DATA_COUNT 658
+#define NO_CLIP_CHECK
 #define SEQ_CHANNEL_COUNT 3
 

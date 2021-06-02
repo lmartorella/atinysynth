@@ -90,7 +90,7 @@ static int add_channel_frame(int channel, int frequency, int time_scale, int vol
 		error_handler("Can't pack frame: adsr time_scale", line, pos);
 		return 0;
 	}
-	frame->adsr_time_scale = time_scale;
+	frame->adsr_time_scale_1 = time_scale - 1;
 	frame->adsr_release_start = (uint8_t)round(ADSR_TIME_UNITS * articulation) - 1;
 	return 1;
 }

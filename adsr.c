@@ -27,8 +27,8 @@
  */
 void adsr_config(struct adsr_env_gen_t* const adsr, struct seq_frame_t* const frame) {
 	adsr->def.release_start = frame->adsr_release_start;
-	adsr->def.time_scale = frame->adsr_time_scale;
-	adsr->next_event = adsr->def.time_scale - 1;
+	adsr->def.time_scale = frame->adsr_time_scale_1;
+	adsr->next_event = adsr->def.time_scale;
 	adsr->state_counter = ADSR_STATE_INIT;
 	adsr->gain = 8;
 }
@@ -70,7 +70,7 @@ uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
 		adsr->state_counter = 0xff;
 	}
 
-	adsr->next_event = adsr->def.time_scale - 1;
+	adsr->next_event = adsr->def.time_scale;
 	adsr->state_counter++;
 	return adsr->gain;
 }

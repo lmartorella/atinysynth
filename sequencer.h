@@ -27,8 +27,8 @@
  * Contains the definition of the next waveform and envelope.
  */
 struct seq_frame_t {
-    /*! ADSR time-scale */
-    uint16_t adsr_time_scale;
+    /*! ADSR time-scale - 1 (avoid a 16bit decrement at runtime) */
+    uint16_t adsr_time_scale_1;
     /*! Waveform full period as `sample_freq / frequency`, or zero for pauses */
     uint16_t wf_period;
     /*! Waveform amplitude */

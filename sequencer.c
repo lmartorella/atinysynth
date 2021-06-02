@@ -149,7 +149,7 @@ void seq_feed_synth() {
         if ((synth.enable & mask) == 0) {
             // Feed data
 			new_frame_require();
-            if (seq_buf_frame.adsr_time_scale == 0) {
+            if (seq_buf_frame.adsr_time_scale_1 == 0) {
                 // End-of-stream
 				end = 1;
                 return;

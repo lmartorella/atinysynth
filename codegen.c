@@ -83,7 +83,7 @@ static void codegen_compress_stream(struct seq_frame_t* frame_stream, int frame_
 
 	for (int i = 0; i < frame_count; i++) {
 		struct seq_frame_t* frame = frame_stream + i;
-		distribution_add(&dist_adsr_time_scale, frame->adsr_time_scale);
+		distribution_add(&dist_adsr_time_scale, frame->adsr_time_scale_1);
 		distribution_add(&dist_wf_period, frame->wf_period);
 		distribution_add(&dist_wf_amplitude, frame->wf_amplitude);
 		distribution_add(&dist_adsr_release_start, frame->adsr_release_start);
@@ -161,7 +161,7 @@ int codegen_write(const char* tune_name, struct seq_frame_t* frame_stream, int f
 	for (int i = 0; i < frame_count; i++) {
 		fprintf(cSrc, "\t{ ");
 		if (dist_adsr_time_scale.bit_count) {
-			fprintf(cSrc, "%d, ", dist_adsr_time_scale.map_of_refs[frame_stream[i].adsr_time_scale]);
+			fprintf(cSrc, "%d, ", dist_adsr_time_scale.map_of_refs[frame_stream[i].adsr_time_scale_1]);
 		}
 		if (dist_wf_period.bit_count) {
             fprintf(cSrc, "%d, ", dist_wf_period.map_of_refs[frame_stream[i].wf_period]);

@@ -75,7 +75,7 @@ static int process_mml(const char* name, int* voice_count) {
 void new_frame_require() {
 	seq_buf_frame = seq_frame_stream[current_frame++];
 	if (current_frame >= frame_count) {
-		seq_buf_frame.adsr_time_scale = 0;
+		seq_buf_frame.adsr_time_scale_1 = 0;
 	}
 }
 
