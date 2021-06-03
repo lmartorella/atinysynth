@@ -175,7 +175,9 @@ void seq_free(struct seq_frame_t* seq_frame_stream) {
 }
 
 struct distribution16_t {
+	// Distribution map
 	int map[0x10000];
+	// Reverse map, from value to index
 	int map_of_refs[0x10000];
 	struct ref_map_t refs;
 };
@@ -214,7 +216,28 @@ static void distribution_calc(struct distribution16_t* dist) {
     }
 }
 
-void stream_compress(struct seq_frame_t* frame_stream, int frame_count, struct bit_stream_t* stream) {
+struct stream_writer_t {
+	uint8_t* buffer;
+	int pos;
+	int bit_pos;
+};
+
+static void write_bits(struct stream_writer_t* writer, uint8_t data, uint8_t bits) {
+	if (bits) {
+		uint16_t buffer = data << writer->bit_pos;
+
+		writer->buffer[writer->pos] |= (buffer & 0xff);
+		writer->buffer[writer->pos + 1] |= (buffer >> 8);
+
+		writer->bit_pos += bits;
+		if (writer->bit_pos >= 8) {
+			writer->bit_pos -= 8;
+			writer->pos++;
+		}
+	}
+}
+
+int stream_compress(struct seq_frame_t* frame_stream, int frame_count, struct bit_stream_t* stream) {
 	// Analyze the stream to extract the data ref tables
 	distribution_init(&dist_adsr_time_scale);
 	distribution_init(&dist_wf_period);
@@ -239,21 +262,56 @@ void stream_compress(struct seq_frame_t* frame_stream, int frame_count, struct b
 	printf("\tadsr_release_start: ");
 	distribution_calc(&dist_adsr_release_start);
 
-	int bits_per_frame = dist_adsr_time_scale.refs.bit_count + dist_wf_period.refs.bit_count + dist_wf_amplitude.refs.bit_count + dist_adsr_release_start.refs.bit_count;
-
-	// Now compile down the bit stream
-	stream->data_size = (int)ceil(frame_count * bits_per_frame / 8.0);
-	stream->data = malloc(stream->data_size);
-
+	// Copy output ref maps
 	stream->refs_adsr_time_scale = dist_adsr_time_scale.refs;
 	stream->refs_wf_period = dist_wf_period.refs;
 	stream->refs_wf_amplitude = dist_wf_amplitude.refs;
 	stream->refs_adsr_release_start = dist_adsr_release_start.refs;
 
+	// Check limitation of uncompress algo
+	if (dist_adsr_time_scale.refs.bit_count > 8 || 
+		dist_wf_period.refs.bit_count > 8 || 
+		dist_wf_amplitude.refs.bit_count > 8 || 
+		dist_adsr_release_start.refs.bit_count > 8) {
+		fprintf(stderr, "Field ref doesn't fit in 8 bit");
+		return 1;
+	}
+
+	int bits_per_frame = dist_adsr_time_scale.refs.bit_count + dist_wf_period.refs.bit_count + dist_wf_amplitude.refs.bit_count + dist_adsr_release_start.refs.bit_count;
+	// The last frame data will be all 0s
+	stream->data_size = (int)ceil((frame_count + 1) * bits_per_frame / 8.0);
 	printf("Stream size: %d bytes\n", stream->data_size);
+
+	// +1 again for the write_bits rounding
+	stream->data = malloc(stream->data_size + 1);
+	memset(stream->data, 0, stream->data_size + 1);
+
+	// Now compile down the bit stream
+	struct stream_writer_t stream_writer;
+	stream_writer.buffer = stream->data;
+	stream_writer.pos = 0;
+	stream_writer.bit_pos = 0;
+	for (int i = 0; i < frame_count; i++) {
+		write_bits(&stream_writer, dist_adsr_time_scale.map_of_refs[frame_stream[i].adsr_time_scale_1], dist_adsr_time_scale.refs.bit_count);
+		write_bits(&stream_writer, dist_wf_period.map_of_refs[frame_stream[i].wf_period], dist_wf_period.refs.bit_count);
+		write_bits(&stream_writer, dist_wf_amplitude.map_of_refs[frame_stream[i].wf_amplitude], dist_wf_amplitude.refs.bit_count);
+		write_bits(&stream_writer, dist_adsr_release_start.map_of_refs[frame_stream[i].adsr_release_start], dist_adsr_release_start.refs.bit_count);
+	}
+
+	// EOF. The risk is that a valid note close to the stream end has all refs = 0. However this is only a filler to be discarded when the pointer reaches the end
+	write_bits(&stream_writer, 0, dist_adsr_time_scale.refs.bit_count);
+	write_bits(&stream_writer, 0, dist_wf_period.refs.bit_count);
+	write_bits(&stream_writer, 0, dist_wf_amplitude.refs.bit_count);
+	write_bits(&stream_writer, 0, dist_adsr_release_start.refs.bit_count);
+
+	return 0;
 }
 
 void stream_free(struct bit_stream_t* stream) {
 	free(stream->data);
+	free(stream->refs_adsr_time_scale.values);
+	free(stream->refs_wf_period.values);
+	free(stream->refs_wf_amplitude.values);
+	free(stream->refs_adsr_release_start.values);
 }
 

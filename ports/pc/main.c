@@ -32,7 +32,8 @@ struct poly_synth_t synth;
 static int16_t samples[8192];
 static uint16_t samples_sz = 0;
 static struct bit_stream_t bit_stream;
-static int current_position;
+static int stream_pos;
+static int stream_pos_bit;
 
 /* Read and play a MML file */
 static void mml_error(const char* err, int line, int column) {
@@ -72,16 +73,45 @@ static int process_mml(const char* name, int* voice_count) {
 	mml_free(&map);
 
 	// Compress stream
-	stream_compress(seq_frame_stream, frame_count, &bit_stream);
+	if (stream_compress(seq_frame_stream, frame_count, &bit_stream)) {
+		return 1;
+	}
 	
 	return codegen_write(name, &bit_stream, channel_count, do_clip_check);
 }
 
+static uint8_t read_bits(uint8_t bits) {
+	if (bits) {
+		uint16_t buffer = bit_stream.data[stream_pos] + (bit_stream.data[stream_pos + 1] << 8);
+		buffer >>= stream_pos_bit;
+		uint8_t ret = buffer & ((1 << bits) - 1);
+
+		stream_pos_bit += bits;
+		if (stream_pos_bit >= 8) {
+			stream_pos_bit -= 8;
+			stream_pos++;
+		}
+
+		return ret;
+	} else {
+		return 0;
+	}
+}
+
 void new_frame_require() {
-	// seq_buf_frame = seq_frame_stream[current_frame++];
-	// if (current_frame >= frame_count) {
-	// 	seq_buf_frame.adsr_time_scale_1 = 0;
-	// }
+	uint8_t ref_adsr_time_scale = read_bits(bit_stream.refs_adsr_time_scale.bit_count);
+	uint8_t ref_wf_period = read_bits(bit_stream.refs_wf_period.bit_count);
+	uint8_t ref_wf_amplitude = read_bits(bit_stream.refs_wf_amplitude.bit_count);
+	uint8_t ref_adsr_release_start = read_bits(bit_stream.refs_adsr_release_start.bit_count);
+
+	if (stream_pos >= (bit_stream.data_size - 1) && !ref_adsr_time_scale && !ref_wf_period && !ref_wf_amplitude && !ref_adsr_release_start) {
+		seq_buf_frame.adsr_time_scale_1 = 0;
+	} else {
+		seq_buf_frame.adsr_time_scale_1 = bit_stream.refs_adsr_time_scale.values[ref_adsr_time_scale];
+		seq_buf_frame.wf_period = bit_stream.refs_wf_period.values[ref_wf_period];
+		seq_buf_frame.wf_amplitude = bit_stream.refs_wf_amplitude.values[ref_wf_amplitude];
+		seq_buf_frame.adsr_release_start = bit_stream.refs_adsr_release_start.values[ref_adsr_release_start];
+	}
 }
 
 int main(int argc, char** argv) {
@@ -132,7 +162,8 @@ int main(int argc, char** argv) {
 			}
 
 			_DPRINTF("playing sequencer stream\n");
-			current_position = 0;
+			stream_pos = 0;
+			stream_pos_bit = 0;
 
 			seq_play_stream(voice_count);
 		}

@@ -99,7 +99,7 @@ struct bit_stream_t {
 };
 
 /*! Compress the frame stream to bit-stream */
-void stream_compress(struct seq_frame_t* frame_stream, int frame_count, struct bit_stream_t* stream);
+int stream_compress(struct seq_frame_t* frame_stream, int frame_count, struct bit_stream_t* stream);
 
 /*! Free the stream */
 void stream_free(struct bit_stream_t* stream);
