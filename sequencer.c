@@ -21,6 +21,7 @@
 #include "debug.h"
 #include "sequencer.h"
 #include "synth.h"
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -172,3 +173,87 @@ void seq_feed_synth() {
 void seq_free(struct seq_frame_t* seq_frame_stream) {
 	free(seq_frame_stream);
 }
+
+struct distribution16_t {
+	int map[0x10000];
+	int map_of_refs[0x10000];
+	struct ref_map_t refs;
+};
+
+static struct distribution16_t dist_adsr_time_scale;
+static struct distribution16_t dist_wf_period;
+static struct distribution16_t dist_wf_amplitude;
+static struct distribution16_t dist_adsr_release_start;
+
+static void distribution_init(struct distribution16_t* dist) {
+	memset(dist->map, 0, 0x10000 * sizeof(int));
+	memset(dist->map_of_refs, 0xff, 0x10000 * sizeof(int));
+	dist->refs.count = 0;
+    dist->refs.values = 0;
+}
+
+static void distribution_add(struct distribution16_t* dist, uint16_t value) {
+	if (!dist->map[value]) {
+		dist->refs.count++;
+	}
+	dist->map[value]++;
+}
+
+static void distribution_calc(struct distribution16_t* dist) {
+	dist->refs.bit_count = ceil(log(dist->refs.count) / log(2));
+	printf("%d (%d bits)\n", dist->refs.count, dist->refs.bit_count);
+
+    dist->refs.values = malloc(sizeof(int) * dist->refs.count);
+    int j = 0;
+    for (int i = 0; i < 0x10000; i++) {
+        if (dist->map[i]) {
+            dist->refs.values[j] = i;
+            dist->map_of_refs[i] = j;
+            j++;
+        }
+    }
+}
+
+void stream_compress(struct seq_frame_t* frame_stream, int frame_count, struct bit_stream_t* stream) {
+	// Analyze the stream to extract the data ref tables
+	distribution_init(&dist_adsr_time_scale);
+	distribution_init(&dist_wf_period);
+	distribution_init(&dist_wf_amplitude);
+	distribution_init(&dist_adsr_release_start);
+
+	for (int i = 0; i < frame_count; i++) {
+		struct seq_frame_t* frame = frame_stream + i;
+		distribution_add(&dist_adsr_time_scale, frame->adsr_time_scale_1);
+		distribution_add(&dist_wf_period, frame->wf_period);
+		distribution_add(&dist_wf_amplitude, frame->wf_amplitude);
+		distribution_add(&dist_adsr_release_start, frame->adsr_release_start);
+	}
+
+	printf("Distribution chart for %d frames:\n", frame_count);
+	printf("\tadsr_time_scale: ");
+	distribution_calc(&dist_adsr_time_scale);
+	printf("\twf_period: ");
+	distribution_calc(&dist_wf_period);
+	printf("\twf_amplitude: ");
+	distribution_calc(&dist_wf_amplitude);
+	printf("\tadsr_release_start: ");
+	distribution_calc(&dist_adsr_release_start);
+
+	int bits_per_frame = dist_adsr_time_scale.refs.bit_count + dist_wf_period.refs.bit_count + dist_wf_amplitude.refs.bit_count + dist_adsr_release_start.refs.bit_count;
+
+	// Now compile down the bit stream
+	stream->data_size = (int)ceil(frame_count * bits_per_frame / 8.0);
+	stream->data = malloc(stream->data_size);
+
+	stream->refs_adsr_time_scale = dist_adsr_time_scale.refs;
+	stream->refs_wf_period = dist_wf_period.refs;
+	stream->refs_wf_amplitude = dist_wf_amplitude.refs;
+	stream->refs_adsr_release_start = dist_adsr_release_start.refs;
+
+	printf("Stream size: %d bytes\n", stream->data_size);
+}
+
+void stream_free(struct bit_stream_t* stream) {
+	free(stream->data);
+}
+

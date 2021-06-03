@@ -83,4 +83,25 @@ void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream,
 /*! Free the stream allocated by `seq_compile`. */
 void seq_free(struct seq_frame_t* seq_frame_stream);
 
+struct ref_map_t {
+    int count;
+    int* values;
+    int bit_count;
+};
+
+struct bit_stream_t {
+    struct ref_map_t refs_adsr_time_scale;
+    struct ref_map_t refs_wf_period;
+    struct ref_map_t refs_wf_amplitude;
+    struct ref_map_t refs_adsr_release_start;
+    uint8_t* data;
+    int data_size;
+};
+
+/*! Compress the frame stream to bit-stream */
+void stream_compress(struct seq_frame_t* frame_stream, int frame_count, struct bit_stream_t* stream);
+
+/*! Free the stream */
+void stream_free(struct bit_stream_t* stream);
+
 #endif

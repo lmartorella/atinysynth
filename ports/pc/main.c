@@ -31,9 +31,8 @@ struct poly_synth_t synth;
 
 static int16_t samples[8192];
 static uint16_t samples_sz = 0;
-static struct seq_frame_t* seq_frame_stream;
-static int current_frame;
-static int frame_count;
+static struct bit_stream_t bit_stream;
+static int current_position;
 
 /* Read and play a MML file */
 static void mml_error(const char* err, int line, int column) {
@@ -66,17 +65,23 @@ static int process_mml(const char* name, int* voice_count) {
 
 	// Sort frames in stream
 	int do_clip_check;
+	struct seq_frame_t* seq_frame_stream;
+	int current_frame;
+	int frame_count;
 	seq_compile(&map, &seq_frame_stream, &frame_count, voice_count, &do_clip_check);
 	mml_free(&map);
+
+	// Compress stream
+	stream_compress(seq_frame_stream, frame_count, &bit_stream);
 	
-	return codegen_write(name, seq_frame_stream, frame_count, channel_count, do_clip_check);
+	return codegen_write(name, &bit_stream, channel_count, do_clip_check);
 }
 
 void new_frame_require() {
-	seq_buf_frame = seq_frame_stream[current_frame++];
-	if (current_frame >= frame_count) {
-		seq_buf_frame.adsr_time_scale_1 = 0;
-	}
+	// seq_buf_frame = seq_frame_stream[current_frame++];
+	// if (current_frame >= frame_count) {
+	// 	seq_buf_frame.adsr_time_scale_1 = 0;
+	// }
 }
 
 int main(int argc, char** argv) {
@@ -127,7 +132,7 @@ int main(int argc, char** argv) {
 			}
 
 			_DPRINTF("playing sequencer stream\n");
-			current_frame = 0;
+			current_position = 0;
 
 			seq_play_stream(voice_count);
 		}
