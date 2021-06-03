@@ -18,18 +18,74 @@
     
 struct poly_synth_t synth;
 
-static const struct tune_frame_t* tune_ptr;
-static const struct tune_frame_t* tune_ptr_end;
+static const uint8_t* tune_ptr;
+static const uint8_t* tune_ptr_end;
+static uint8_t tune_ptr_bits;
 
-void new_frame_require() {
-    seq_buf_frame.adsr_time_scale_1 = tune_adsr_time_scale_refs[tune_ptr->adsr_time_scale];
-    seq_buf_frame.wf_period = tune_wf_period_refs[tune_ptr->wf_period];
-    seq_buf_frame.wf_amplitude = tune_wf_amplitude_refs[0];
-    seq_buf_frame.adsr_release_start = tune_adsr_release_start_refs[0];
-    tune_ptr++;
-    if (tune_ptr == tune_ptr_end) {
-        seq_buf_frame.adsr_time_scale_1 = 0;
+// Return it unmasked
+static uint8_t read_bits(uint8_t bits) {
+    uint16_t buffer = *tune_ptr + (*(tune_ptr + 1) << 8);
+    buffer >>= tune_ptr_bits;
+    tune_ptr_bits += bits;
+    if (tune_ptr_bits >= 8) {
+        tune_ptr_bits -= 8;
+        tune_ptr++;
     }
+    return buffer;
+}
+
+// Slow
+void new_frame_require() {
+#if BITS_ADSR_TIME_SCALE > 0
+	uint8_t ref_adsr_time_scale = read_bits(BITS_ADSR_TIME_SCALE) & ((1 << BITS_ADSR_TIME_SCALE) - 1);
+#endif
+#if BITS_WF_PERIOD > 0
+	uint8_t ref_wf_period = read_bits(BITS_WF_PERIOD) & ((1 << BITS_WF_PERIOD) - 1);
+#endif
+#if BITS_WF_AMPLITUDE > 0
+	uint8_t ref_wf_amplitude = read_bits(BITS_WF_AMPLITUDE) & ((1 << BITS_WF_AMPLITUDE) - 1);
+#endif
+#if BITS_ADSR_RELEASE_START > 0
+	uint8_t ref_adsr_release_start = read_bits(BITS_ADSR_RELEASE_START) & ((1 << BITS_ADSR_RELEASE_START) - 1);
+#endif
+
+	if (tune_ptr >= tune_ptr_end
+#if BITS_ADSR_TIME_SCALE > 0
+            && !ref_adsr_time_scale
+#endif
+#if BITS_WF_PERIOD > 0
+            && !ref_wf_period 
+#endif
+#if BITS_WF_AMPLITUDE > 0
+            && !ref_wf_amplitude 
+#endif
+#if BITS_ADSR_RELEASE_START > 0
+            && !ref_adsr_release_start
+#endif
+            ) {
+		seq_buf_frame.adsr_time_scale_1 = 0;
+	} else {
+#if BITS_ADSR_TIME_SCALE > 0
+		seq_buf_frame.adsr_time_scale_1 = tune_adsr_time_scale_refs[ref_adsr_time_scale];
+#else
+		seq_buf_frame.adsr_time_scale_1 = tune_adsr_time_scale_refs[0];
+#endif
+#if BITS_WF_PERIOD > 0
+		seq_buf_frame.wf_period = tune_wf_period_refs[ref_wf_period];
+#else
+		seq_buf_frame.wf_period = tune_wf_period_refs[0];
+#endif
+#if BITS_WF_AMPLITUDE > 0
+		seq_buf_frame.wf_amplitude = tune_wf_amplitude_refs[ref_wf_amplitude];
+#else
+		seq_buf_frame.wf_amplitude = tune_wf_amplitude_refs[0];
+#endif
+#if BITS_ADSR_RELEASE_START > 0
+		seq_buf_frame.adsr_release_start = tune_adsr_release_start_refs[ref_adsr_release_start];
+#else
+		seq_buf_frame.adsr_release_start = tune_adsr_release_start_refs[0];
+#endif
+	}
 }
 
 // Creates a SYNTH_FREQ / 4 square wave
@@ -87,7 +143,9 @@ void main() {
 
     while (1) {
         tune_ptr = tune_data;
-        tune_ptr_end = tune_data + TUNE_DATA_COUNT;
+        tune_ptr_end = tune_data + TUNE_DATA_SIZE - 1;
+        tune_ptr_bits = 0;
+        
         seq_play_stream(SEQ_CHANNEL_COUNT);
         seq_feed_synth();
 

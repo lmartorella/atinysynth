@@ -1,6 +1,8 @@
 #ifndef _POLY_CFG_H
 #define _POLY_CFG_H
 
+#include "tune_gen.h"
+
 /*!
  * Polyphonic synthesizer for microcontrollers.
  * (C) 2016 Stuart Longland

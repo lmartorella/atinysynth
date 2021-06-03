@@ -89,8 +89,8 @@ static inline int8_t poly_synth_next() {
 #ifdef CHECK_CLIPPING
 		clip_count++;
 #endif
-#endif
 	}
+#endif
 	return sample;
 };
 #endif

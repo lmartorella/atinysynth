@@ -58,7 +58,7 @@ int codegen_write(const char* tune_name, struct bit_stream_t* stream, int channe
     fprintf(hSrc, "extern const uint16_t tune_wf_period_refs[];\n");
     fprintf(hSrc, "extern const uint8_t tune_wf_amplitude_refs[];\n");
     fprintf(hSrc, "extern const uint8_t tune_adsr_release_start_refs[];\n");
-    fprintf(hSrc, "extern const struct uint8_t tune_data[TUNE_DATA_SIZE];\n\n");
+    fprintf(hSrc, "extern const uint8_t tune_data[TUNE_DATA_SIZE];\n\n");
 
 	printf("File tune_gen.h written\n");
 	fclose(hSrc);
