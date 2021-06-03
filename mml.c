@@ -22,6 +22,7 @@
 #include "synth.h"
 #include "sequencer.h"
 #include "debug.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -49,7 +50,7 @@ static void init_stream_channel(int channel) {
 	frame_map.channels[channel].frames = malloc(sizeof(struct seq_frame_t) * 16);
 }
 
-static int add_channel_frame(int channel, int frequency, int duration, int volume, double articulation, int waveform) {
+static int add_channel_frame(int channel, int frequency, int time_scale, int volume, double articulation, int waveform) {
 	if (channel >= frame_map.channel_count) {
 		int old_count = frame_map.channel_count;
 		frame_map.channel_count = channel + 1;
@@ -85,12 +86,11 @@ static int add_channel_frame(int channel, int frequency, int duration, int volum
     }
 
 	// Calc duration and scale
-	int time_scale = (int)round((double)duration / ADSR_TIME_UNITS);
 	if (time_scale > UINT16_MAX) {
 		error_handler("Can't pack frame: adsr time_scale", line, pos);
 		return 0;
 	}
-	frame->adsr_time_scale = time_scale;
+	frame->adsr_time_scale_1 = time_scale - 1;
 	frame->adsr_release_start = (uint8_t)round(ADSR_TIME_UNITS * articulation) - 1;
 	return 1;
 }
@@ -141,15 +141,6 @@ static int get_freq_from_note(char note, int sharp, int octave) {
 	return get_freq_from_code(semitone + octave * 12);
 }
 
-/*! Get duration in samples. Tempo is in numbers of quartes per minute. Length is fraction of whole note. Dots are number of dots (1 dot = 3/2, 2 dots = 9/4, etc..) */
-static int get_duration(int tempo, int length, int dots) {
-	double l = length;
-	for (; dots > 0; dots--) {
-		l /= 1.5;
-	}
-	return (int)round(synth_freq * 60.0 * 4 / tempo / l);
-}
-
 /*! Parser state, per channel */
 struct mml_channel_state_t {
 	int octave;
@@ -161,9 +152,36 @@ struct mml_channel_state_t {
 	int waveform;
 	// Active in current MML parsing line
 	int isActive;
+	// Running time in seconds and time units. Used to round note duration and not accumulate errors (skew between channels).
+	struct {
+		double seconds;
+		int time_units;
+	} running_time;
 };
 static struct mml_channel_state_t* mml_channel_states;
 static int mml_channel_count;
+
+/*! 
+ * Get duration in ADSR time scale units. 
+ * Tempo is in channel state. 
+ * Length is fraction of whole note. Dots are number of dots (1 dot = 3/2, 2 dots = 9/4, etc..) 
+ */
+static int get_adsr_time_scale(struct mml_channel_state_t* state, int length, int dots) {
+	double l = length;
+	for (; dots > 0; dots--) {
+		l /= 1.5;
+	}
+	double seconds = 60.0 * 4 / state->tempo / l;
+	state->running_time.seconds += seconds;
+
+	// Round note duration to not accumulate errors (skew between channels)
+	double time_units_total = (int)round(state->running_time.seconds * synth_freq);
+	double delta_units = time_units_total - state->running_time.time_units;
+	int time_scale = (int)round(delta_units / ADSR_TIME_UNITS);
+
+	state->running_time.time_units += time_scale * ADSR_TIME_UNITS;
+	return time_scale;
+}
 
 static void enable_channel(int channel) {
 	if (channel >= mml_channel_count) {
@@ -177,6 +195,8 @@ static void enable_channel(int channel) {
 		mml_channel_states[channel].volume = 63;
 		mml_channel_states[channel].articulation = ARTICULATION_NORMAL;
 		mml_channel_states[channel].waveform = VOICE_MODE_SQUARE;
+		mml_channel_states[channel].running_time.seconds = 0;
+		mml_channel_states[channel].running_time.time_units = 0;
 	}
 
 	mml_channel_states[channel].isActive = 1;
@@ -448,8 +468,8 @@ static int mml_parse(const char* content) {
 						isPause = 1;
 					}
 					int frequency = isPause ? 0 : (isNoteCode ? get_freq_from_code(noteCode) : get_freq_from_note(code, sharp, mml_channel_states[i].octave));
-					int duration = get_duration(mml_channel_states[i].tempo, length < 0 ? mml_channel_states[i].default_length : length, (length < 0 && !dot) ? mml_channel_states[i].default_length_dot : dot);
-					if (!add_channel_frame(i, frequency, duration, mml_channel_states[i].volume, mml_channel_states[i].articulation, mml_channel_states[i].waveform)) {
+					int time_scale = get_adsr_time_scale(&mml_channel_states[i], length < 0 ? mml_channel_states[i].default_length : length, (length < 0 && !dot) ? mml_channel_states[i].default_length_dot : dot);
+					if (!add_channel_frame(i, frequency, time_scale, mml_channel_states[i].volume, mml_channel_states[i].articulation, mml_channel_states[i].waveform)) {
 						return 1;
 					}
 				}
@@ -458,6 +478,11 @@ static int mml_parse(const char* content) {
 			error_handler("Unknown command", line, pos);
 			return 1;
 		}
+	}
+
+	printf("MML stats:\n");
+	for (int i = 0; i < mml_channel_count; i++) {
+		printf("\tchannel %d time %fs (%d samples)\n", i, (float)mml_channel_states[i].running_time.seconds, mml_channel_states[i].running_time.time_units);
 	}
 
 	free(mml_channel_states);

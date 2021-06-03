@@ -31,7 +31,6 @@
 #define TIME_SCALE_MAX  UINT16_MAX
 #define CHANNEL_MASK_T  uint8_t
 
-#define VOICE_COUNT 4
-#define SEQ_VOICE_COUNT 4
+#define VOICE_COUNT SEQ_CHANNEL_COUNT
 
 #endif

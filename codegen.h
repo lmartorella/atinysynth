@@ -23,6 +23,6 @@
 #include "sequencer.h"
 
 /*! Write the source code with the stream data */
-int codegen_write(const char* tune_name, struct seq_frame_t* frame_stream, int frame_count);
+int codegen_write(const char* tune_name, struct seq_frame_t* frame_stream, int frame_count, int channel_count, int do_clip_check);
 
 #endif

@@ -83,7 +83,7 @@ static void codegen_compress_stream(struct seq_frame_t* frame_stream, int frame_
 
 	for (int i = 0; i < frame_count; i++) {
 		struct seq_frame_t* frame = frame_stream + i;
-		distribution_add(&dist_adsr_time_scale, frame->adsr_time_scale);
+		distribution_add(&dist_adsr_time_scale, frame->adsr_time_scale_1);
 		distribution_add(&dist_wf_period, frame->wf_period);
 		distribution_add(&dist_wf_amplitude, frame->wf_amplitude);
 		distribution_add(&dist_adsr_release_start, frame->adsr_release_start);
@@ -100,7 +100,7 @@ static void codegen_compress_stream(struct seq_frame_t* frame_stream, int frame_
 	distribution_calc(&dist_adsr_release_start);
 }
 
-int codegen_write(const char* tune_name, struct seq_frame_t* frame_stream, int frame_count) {
+int codegen_write(const char* tune_name, struct seq_frame_t* frame_stream, int frame_count, int channel_count, int has_clip) {
     codegen_compress_stream(frame_stream, frame_count);
 
     // Prepare the header for tune_gen.h (with dynamic bit sizes)
@@ -114,17 +114,31 @@ int codegen_write(const char* tune_name, struct seq_frame_t* frame_stream, int f
 	fprintf(hSrc, "// Tune: %s\n\n", tune_name);
 
     fprintf(hSrc, "struct tune_frame_t {\n");
-    fprintf(hSrc, "\tuint8_t adsr_time_scale : %d;\n", dist_adsr_time_scale.bit_count);
-    fprintf(hSrc, "\tuint8_t wf_period : %d;\n", dist_wf_period.bit_count);
-    fprintf(hSrc, "\tuint8_t wf_amplitude : %d;\n", dist_wf_amplitude.bit_count);
-    fprintf(hSrc, "\tuint8_t adsr_release_start : %d;\n", dist_adsr_release_start.bit_count);
+	if (dist_adsr_time_scale.bit_count) {
+    	fprintf(hSrc, "\tuint8_t adsr_time_scale : %d;\n", dist_adsr_time_scale.bit_count);
+	}
+	if (dist_wf_period.bit_count) {
+    	fprintf(hSrc, "\tuint8_t wf_period : %d;\n", dist_wf_period.bit_count);
+	}
+	if (dist_wf_amplitude.bit_count) {
+    	fprintf(hSrc, "\tuint8_t wf_amplitude : %d;\n", dist_wf_amplitude.bit_count);
+	}
+	if (dist_adsr_release_start.bit_count) {
+    	fprintf(hSrc, "\tuint8_t adsr_release_start : %d;\n", dist_adsr_release_start.bit_count);
+	}
 	fprintf(hSrc, "};\n\n");
 
     fprintf(hSrc, "extern const uint16_t tune_adsr_time_scale_refs[];\n");
     fprintf(hSrc, "extern const uint16_t tune_wf_period_refs[];\n");
     fprintf(hSrc, "extern const uint8_t tune_wf_amplitude_refs[];\n");
     fprintf(hSrc, "extern const uint8_t tune_adsr_release_start_refs[];\n");
-    fprintf(hSrc, "extern const struct tune_frame_t tune_data[];\n");
+    fprintf(hSrc, "extern const struct tune_frame_t tune_data[];\n\n");
+
+	fprintf(hSrc, "#define TUNE_DATA_COUNT %d\n", frame_count);
+	if (!has_clip) {
+		fprintf(hSrc, "#define NO_CLIP_CHECK\n");
+	}
+	fprintf(hSrc, "#define SEQ_CHANNEL_COUNT %d\n\n", channel_count);
 
 	printf("File tune_gen.h written\n");
 	fclose(hSrc);
@@ -143,14 +157,22 @@ int codegen_write(const char* tune_name, struct seq_frame_t* frame_stream, int f
     distribution_codegen(cSrc, "tune_wf_amplitude_refs", "uint8_t", &dist_wf_amplitude);
     distribution_codegen(cSrc, "tune_adsr_release_start_refs", "uint8_t", &dist_adsr_release_start);
 
-    fprintf(cSrc, "const struct tune_frame_t tune_data[] = {\n");
+    fprintf(cSrc, "const struct tune_frame_t tune_data[TUNE_DATA_COUNT] = {\n");
 	for (int i = 0; i < frame_count; i++) {
-		fprintf(cSrc, "\t{ %d, %d, %d, %d },\n", 
-            dist_adsr_time_scale.map_of_refs[frame_stream[i].adsr_time_scale],
-            dist_wf_period.map_of_refs[frame_stream[i].wf_period],
-            dist_wf_amplitude.map_of_refs[frame_stream[i].wf_amplitude],
-            dist_adsr_release_start.map_of_refs[frame_stream[i].adsr_release_start]
-        );
+		fprintf(cSrc, "\t{ ");
+		if (dist_adsr_time_scale.bit_count) {
+			fprintf(cSrc, "%d, ", dist_adsr_time_scale.map_of_refs[frame_stream[i].adsr_time_scale_1]);
+		}
+		if (dist_wf_period.bit_count) {
+            fprintf(cSrc, "%d, ", dist_wf_period.map_of_refs[frame_stream[i].wf_period]);
+		}
+		if (dist_wf_amplitude.bit_count) {
+            fprintf(cSrc, "%d, ", dist_wf_amplitude.map_of_refs[frame_stream[i].wf_amplitude]);
+		}
+		if (dist_adsr_release_start.bit_count) {
+            fprintf(cSrc, "%d, ", dist_adsr_release_start.map_of_refs[frame_stream[i].adsr_release_start]);
+		}
+		fprintf(cSrc, " },\n");
 	}
 
 	fprintf(cSrc, "};\n\n");

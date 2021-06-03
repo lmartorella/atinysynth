@@ -27,11 +27,10 @@
 #define ADSR_TIME_UNITS 0x40
 
 /* ADSR states, in time units. MAX_TIME_UNIT is fixed, and terminates the envelope */
-#define ADSR_STATE_INIT     		0x00
-#define ADSR_STATE_SUSTAIN_START	0x08
+#define ADSR_STATE_INIT     		(0x00 + 1)
+#define ADSR_STATE_SUSTAIN_START	(0x08 + 1)
 // Release start is dynamic
 #define ADSR_STATE_RELEASE_DURATION 0x06
-#define ADSR_STATE_DONE				ADSR_TIME_UNITS
 
 #include "poly_cfg.h"
 

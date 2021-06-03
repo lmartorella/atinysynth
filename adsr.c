@@ -27,8 +27,8 @@
  */
 void adsr_config(struct adsr_env_gen_t* const adsr, struct seq_frame_t* const frame) {
 	adsr->def.release_start = frame->adsr_release_start;
-	adsr->def.time_scale = frame->adsr_time_scale;
-	adsr->next_event = adsr->def.time_scale - 1;
+	adsr->def.time_scale = frame->adsr_time_scale_1;
+	adsr->next_event = adsr->def.time_scale;
 	adsr->state_counter = ADSR_STATE_INIT;
 	adsr->gain = 8;
 }
@@ -49,7 +49,7 @@ uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
 	 * Attack = gain from 7 to 0
 	 */
 	if (adsr->state_counter < ADSR_STATE_SUSTAIN_START) {
-		adsr->gain = 7 - adsr->state_counter;
+		adsr->gain = 8 - adsr->state_counter;
 	} 
 	
 	// Then decay to 1
@@ -59,15 +59,18 @@ uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
 
 	else if (adsr->state_counter < adsr->def.release_start + ADSR_STATE_RELEASE_DURATION) {
 		// From 2 to 8
-		adsr->gain = (adsr->state_counter - adsr->def.release_start) + 2;
+		adsr->gain = (adsr->state_counter - adsr->def.release_start) + 1;
 	}
 
 	// Then remain mute until ADSR_STATE_DONE
-	else {
+	else if (adsr->state_counter <= ADSR_TIME_UNITS) {
 		adsr->gain = 8;
+	} else {
+		// 0 is the final state (fast to check)
+		adsr->state_counter = 0xff;
 	}
 
-	adsr->next_event = adsr->def.time_scale - 1;
+	adsr->next_event = adsr->def.time_scale;
 	adsr->state_counter++;
 	return adsr->gain;
 }

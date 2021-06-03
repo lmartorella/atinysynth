@@ -27,8 +27,8 @@
  * Contains the definition of the next waveform and envelope.
  */
 struct seq_frame_t {
-    /*! ADSR time-scale */
-    uint16_t adsr_time_scale;
+    /*! ADSR time-scale - 1 (avoid a 16bit decrement at runtime) */
+    uint16_t adsr_time_scale_1;
     /*! Waveform full period as `sample_freq / frequency`, or zero for pauses */
     uint16_t wf_period;
     /*! Waveform amplitude */
@@ -42,7 +42,11 @@ struct seq_frame_t {
  * The frames must then be sorted in the same fetch order and not in channel order.
  * Frames will be fed using the handler passed by `new_frame_require`.
  */
+#ifndef SEQ_CHANNEL_COUNT
 void seq_play_stream(uint8_t voices);
+#else
+void seq_play_stream();
+#endif
 
 /*! Requires a new frame. The call never fails. Returns a zero frame at the end of the stream, or if EOF */
 extern struct seq_frame_t seq_buf_frame;
@@ -74,7 +78,7 @@ struct seq_frame_map_t {
 }; 
 
 /*! Compile/reorder a frame-map (by channel) to a sequential stream */
-void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream, int* frame_count, int* voice_count);
+void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream, int* frame_count, int* voice_count, int* do_clip_check);
 
 /*! Free the stream allocated by `seq_compile`. */
 void seq_free(struct seq_frame_t* seq_frame_stream);

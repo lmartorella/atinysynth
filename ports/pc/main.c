@@ -33,14 +33,14 @@ static int16_t samples[8192];
 static uint16_t samples_sz = 0;
 static struct seq_frame_t* seq_frame_stream;
 static int current_frame;
-int clip_count = 0;
+static int frame_count;
 
 /* Read and play a MML file */
 static void mml_error(const char* err, int line, int column) {
 	fprintf(stderr, "Error reading MML file: %s at line %d, pos %d\n", err, line, column);
 }
 
-static int open_mml(const char* name, int* voice_count) {
+static int process_mml(const char* name, int* voice_count) {
 	FILE *fp = fopen(name, "r");
 	if (!fp) {
 		fprintf(stderr, "Error reading MML file: %s", name);
@@ -62,17 +62,21 @@ static int open_mml(const char* name, int* voice_count) {
 		return err;
 	}
 	free(content);
+	int channel_count = map.channel_count;
 
 	// Sort frames in stream
-	int frame_count;
-	seq_compile(&map, &seq_frame_stream, &frame_count, voice_count);
+	int do_clip_check;
+	seq_compile(&map, &seq_frame_stream, &frame_count, voice_count, &do_clip_check);
 	mml_free(&map);
 	
-	return codegen_write(name, seq_frame_stream, frame_count);
+	return codegen_write(name, seq_frame_stream, frame_count, channel_count, do_clip_check);
 }
 
 void new_frame_require() {
 	seq_buf_frame = seq_frame_stream[current_frame++];
+	if (current_frame >= frame_count) {
+		seq_buf_frame.adsr_time_scale_1 = 0;
+	}
 }
 
 int main(int argc, char** argv) {
@@ -118,7 +122,7 @@ int main(int argc, char** argv) {
 			_DPRINTF("compiling MML %s\n", name);
 			
 			int voice_count;
-			if (open_mml(name, &voice_count)) {
+			if (process_mml(name, &voice_count)) {
 				return 1;
 			}
 
@@ -126,10 +130,6 @@ int main(int argc, char** argv) {
 			current_frame = 0;
 
 			seq_play_stream(voice_count);
-
-			if (clip_count) {
-				printf("! clip count: %d\n", clip_count);
-			}
 		}
 		argv++;
 		argc--;
