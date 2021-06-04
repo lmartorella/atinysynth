@@ -51,21 +51,20 @@ uint8_t adsr_next(struct adsr_env_gen_t* const adsr) {
 	if (adsr->state_counter < ADSR_STATE_SUSTAIN_START) {
 		adsr->gain = 8 - adsr->state_counter;
 	} 
-	
 	// Then decay to 1
 	else if (adsr->state_counter < adsr->def.release_start) {
 		adsr->gain = 1;
 	}
-
 	else if (adsr->state_counter < adsr->def.release_start + ADSR_STATE_RELEASE_DURATION) {
 		// From 2 to 8
-		adsr->gain = (adsr->state_counter - adsr->def.release_start) + 1;
+		adsr->gain = ((adsr->state_counter - adsr->def.release_start) << 3) + 1;
 	}
-
 	// Then remain mute until ADSR_STATE_DONE
-	else if (adsr->state_counter <= ADSR_TIME_UNITS) {
+	else {
 		adsr->gain = 8;
-	} else {
+	} 
+
+	if (adsr->state_counter > ADSR_TIME_UNITS) {
 		// 0 is the final state (fast to check)
 		adsr->state_counter = 0xff;
 	}

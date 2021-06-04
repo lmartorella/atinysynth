@@ -30,7 +30,7 @@
 #define ADSR_STATE_INIT     		(0x00 + 1)
 #define ADSR_STATE_SUSTAIN_START	(0x08 + 1)
 // Release start is dynamic
-#define ADSR_STATE_RELEASE_DURATION 0x06
+#define ADSR_STATE_RELEASE_DURATION (6*8)
 
 #include "poly_cfg.h"
 

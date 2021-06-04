@@ -37,7 +37,7 @@ static void (*error_handler)(const char* err, int line, int column);
 static int line = 1;
 static int pos = 1;
 
-#define ARTICULATION_STACCATO (3.0 / 4.0)
+#define ARTICULATION_STACCATO (2.5 / 4.0)
 #define ARTICULATION_NORMAL (7.0 / 8.0)
 #define ARTICULATION_LEGATO (1.0)
 
