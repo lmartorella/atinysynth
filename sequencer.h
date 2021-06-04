@@ -42,11 +42,7 @@ struct seq_frame_t {
  * The frames must then be sorted in the same fetch order and not in channel order.
  * Frames will be fed using the handler passed by `new_frame_require`.
  */
-#ifndef SEQ_CHANNEL_COUNT
 void seq_play_stream(uint8_t voices);
-#else
-void seq_play_stream();
-#endif
 
 /*! Requires a new frame. The call never fails. Returns a zero frame at the end of the stream, or if EOF */
 extern struct seq_frame_t seq_buf_frame;
@@ -82,5 +78,26 @@ void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream,
 
 /*! Free the stream allocated by `seq_compile`. */
 void seq_free(struct seq_frame_t* seq_frame_stream);
+
+struct ref_map_t {
+    int count;
+    int* values;
+    int bit_count;
+};
+
+struct bit_stream_t {
+    struct ref_map_t refs_adsr_time_scale;
+    struct ref_map_t refs_wf_period;
+    struct ref_map_t refs_wf_amplitude;
+    struct ref_map_t refs_adsr_release_start;
+    uint8_t* data;
+    int data_size;
+};
+
+/*! Compress the frame stream to bit-stream */
+int stream_compress(struct seq_frame_t* frame_stream, int frame_count, struct bit_stream_t* stream);
+
+/*! Free the stream */
+void stream_free(struct bit_stream_t* stream);
 
 #endif

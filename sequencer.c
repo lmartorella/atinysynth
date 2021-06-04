@@ -21,9 +21,6 @@
 #include "debug.h"
 #include "sequencer.h"
 #include "synth.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 /*! State used between `seq_play_stream` and `seq_feed_synth` */
 #ifndef SEQ_CHANNEL_COUNT
@@ -31,104 +28,11 @@ static uint8_t seq_voice_count;
 #else
 #define seq_voice_count SEQ_CHANNEL_COUNT
 #endif
-uint8_t end = 0;
-int clip_count = 0;
 
+uint8_t end = 0;
 struct seq_frame_t seq_buf_frame;
 
-struct compiler_channel_state_t {
-	/*! The positions of every channel in the input channel map */
-	int position;
-};
-
-/*! State of the sequencer compiler */
-struct compiler_state_t {
-	/*! The input channel map */
-	struct seq_frame_map_t* input_map;
-	/*! The output frame stream */
-	struct seq_frame_t* out_stream;
-	/*! The position of writing frame in the output stream */
-	int stream_position;
-	/*! State of each channel */
-	struct compiler_channel_state_t* channels;
-};
-
-/*! Feed the first free channel and copy the selected frame in the output stream */
-static void seq_feed_channels(struct compiler_state_t* state) {
-	intptr_t mask = 1;
-	int voice_idx = 0;
-	for (int map_idx = 0; map_idx < state->input_map->channel_count; map_idx++) {
-		const struct seq_frame_list_t* channel = &state->input_map->channels[map_idx]; 
-		// Skip empty channels
-		if (channel->count > 0) {
-			if (state->channels[voice_idx].position < channel->count && (synth.enable & mask) == 0) {
-				// Feed data
-				struct seq_frame_t* frame = &channel->frames[state->channels[voice_idx].position++];
-
-				voice_wf_set(&synth.voice[voice_idx].wf, frame);
-				adsr_config(&synth.voice[voice_idx].adsr, frame);
-
-				synth.enable |= mask;
-
-				state->out_stream[state->stream_position++] = *frame;
-				// Don't overload the CPU with multiple frames per sample
-				// This will create minimum phase errors (of 1 sample period) but will keep the process real-time on slower CPUs
-				break;
-			}
-			mask <<= 1;
-			voice_idx++;
-		}
-	}
-}
-
-void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream, int* frame_count, int* voice_count, int* do_clip_check) {
-	int total_frame_count = 0;
-	// Skip empty channels
-	int valid_channel_count = 0;
-	for (int i = 0; i < map->channel_count; i++) {
-		if (map->channels[i].count > 0) {
-			valid_channel_count++;
-			total_frame_count += map->channels[i].count;
-		}
-	}
-
-	// Prepare output buffer, with total frame count
-	*frame_count = total_frame_count;
-	*voice_count = valid_channel_count;
-	*frame_stream = malloc(sizeof(struct seq_frame_t) * (*frame_count));
-
-	// Now play sequencer data, currently by channel, simulating the timing of the synth.
-	synth.enable = 0;
-
-	struct compiler_state_t state;
-	state.channels = malloc(sizeof(struct compiler_channel_state_t) * valid_channel_count);
-	memset(state.channels, 0, sizeof(struct compiler_channel_state_t) * valid_channel_count);
-	state.input_map = map;
-	state.out_stream = *frame_stream;
-	state.stream_position = 0;
-
-	seq_feed_channels(&state);
-	while (synth.enable) {
-		poly_synth_next();
-		seq_feed_channels(&state);
-	}
-
-	printf("Compiler stats:\n");
-	if (clip_count) {
-		printf("\tWARN: clip count: %d (slower)\n", clip_count);
-	} else {
-		printf("\tno clip (faster)\n");
-	}
-
-	free(state.channels);
-}
-
-#ifndef SEQ_CHANNEL_COUNT
 void seq_play_stream(uint8_t voices) {
-#else
-void seq_play_stream() {
-#endif
-
 #ifndef SEQ_CHANNEL_COUNT
 	seq_voice_count = voices;
 #endif
@@ -167,8 +71,4 @@ void seq_feed_synth() {
 		mask >>= 1;
 		voice--;
 	} while (mask);
-}
-
-void seq_free(struct seq_frame_t* seq_frame_stream) {
-	free(seq_frame_stream);
 }
