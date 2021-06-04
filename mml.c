@@ -50,7 +50,8 @@ static void init_stream_channel(int channel) {
 	frame_map.channels[channel].frames = malloc(sizeof(struct seq_frame_t) * 16);
 }
 
-static int add_channel_frame(int channel, int frequency, int time_scale, int volume, double articulation, int waveform) {
+static int add_channel_frame(int channel, int frequency, int time_scale, int volume, double articulation, int waveform, int edit_last_duration) {
+	// New channel?
 	if (channel >= frame_map.channel_count) {
 		int old_count = frame_map.channel_count;
 		frame_map.channel_count = channel + 1;
@@ -61,11 +62,18 @@ static int add_channel_frame(int channel, int frequency, int time_scale, int vol
 		}
 	}
 
-	if (frame_map.channels[channel].count > 0 && (frame_map.channels[channel].count % 16) == 0) {
-		frame_map.channels[channel].frames = realloc(frame_map.channels[channel].frames, sizeof(struct seq_frame_t) * (frame_map.channels[channel].count + 16));
+	struct seq_frame_list_t* list = &frame_map.channels[channel];
+	if (!edit_last_duration && list->count > 0 && (list->count % 16) == 0) {
+		list->frames = realloc(list->frames, sizeof(struct seq_frame_t) * (list->count + 16));
 	}
 
-	struct seq_frame_t* frame = &frame_map.channels[channel].frames[frame_map.channels[channel].count++];
+	if (edit_last_duration && list->count == 0) {
+		error_handler("Can't join, no note before", line, pos);
+		return 0;
+	}
+
+	int i = edit_last_duration ? (list->count - 1) : (list->count++);
+	struct seq_frame_t* frame = &list->frames[i];
 
     if (!frequency) {
 #ifdef USE_DC
@@ -86,6 +94,9 @@ static int add_channel_frame(int channel, int frequency, int time_scale, int vol
     }
 
 	// Calc duration and scale
+	if (edit_last_duration) {
+		time_scale += (frame->adsr_time_scale_1 + 1);
+	}
 	if (time_scale > UINT16_MAX) {
 		error_handler("Can't pack frame: adsr time_scale", line, pos);
 		return 0;
@@ -254,6 +265,13 @@ static int mml_parse(const char* content) {
 			line++;
 			reset_active_state();
 			pos = 0;
+			continue;
+		}
+
+		// Join last note?
+		int join = 0;
+		if (code == '&') {
+			join = 1;
 			continue;
 		}
 
@@ -469,7 +487,8 @@ static int mml_parse(const char* content) {
 					}
 					int frequency = isPause ? 0 : (isNoteCode ? get_freq_from_code(noteCode) : get_freq_from_note(code, sharp, mml_channel_states[i].octave));
 					int time_scale = get_adsr_time_scale(&mml_channel_states[i], length < 0 ? mml_channel_states[i].default_length : length, (length < 0 && !dot) ? mml_channel_states[i].default_length_dot : dot);
-					if (!add_channel_frame(i, frequency, time_scale, mml_channel_states[i].volume, mml_channel_states[i].articulation, mml_channel_states[i].waveform)) {
+					
+					if (!add_channel_frame(i, frequency, time_scale, mml_channel_states[i].volume, mml_channel_states[i].articulation, mml_channel_states[i].waveform, join)) {
 						return 1;
 					}
 				}
