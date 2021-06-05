@@ -149,7 +149,7 @@ void main() {
         seq_play_stream(SEQ_CHANNEL_COUNT);
         seq_feed_synth();
 
-        while (synth.enable) {
+        while (!seq_end) {
             
             // From +64 to -64
             int8_t sample = poly_synth_next() >> 1;

@@ -29,7 +29,7 @@ static uint8_t seq_voice_count;
 #define seq_voice_count SEQ_CHANNEL_COUNT
 #endif
 
-uint8_t end = 0;
+uint8_t seq_end = 0;
 struct seq_frame_t seq_buf_frame;
 
 void seq_play_stream(uint8_t voices) {
@@ -38,37 +38,27 @@ void seq_play_stream(uint8_t voices) {
 #endif
 
 	// Disable all channels
-	synth.enable = 0;
-    end = 0;
+    seq_end = 0;
 }
 
 void seq_feed_synth() {
-	if (end) {
-		return;
-	}
-
-	CHANNEL_MASK_T mask = 1 << (seq_voice_count - 1);
-    struct voice_ch_t* voice = &synth.voice[seq_voice_count - 1];
-    do {
-        if ((synth.enable & mask) == 0) {
+    struct voice_ch_t* voice = &synth.voice[0];
+	for (uint8_t i = seq_voice_count; i; i--, voice++) { 
+        if (voice->adsr.state_counter == ADSR_STATE_END) {
             // Feed data
 			new_frame_require();
             if (seq_buf_frame.adsr_time_scale_1 == 0) {
                 // End-of-stream
-				end = 1;
+				seq_end = 1;
                 return;
             }
 
             voice_wf_set(&voice->wf, &seq_buf_frame);
             adsr_config(&voice->adsr, &seq_buf_frame);
 
-            synth.enable |= mask;
-
 			// Don't overload the CPU with multiple frames per sample
 			// This will create minimum phase errors (of 1 sample period) but will keep the process real-time on slower CPUs
 			break;
 		}
-		mask >>= 1;
-		voice--;
-	} while (mask);
+	}
 }

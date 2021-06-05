@@ -42,6 +42,11 @@ void adsr_next(struct adsr_env_gen_t* const adsr) {
 		/* Still waiting for next event */
 		adsr->next_event--;
 	} else {
+		if (!adsr->state_counter) {
+			// Abort
+			adsr->gain = 8;
+			return;
+		}
 		if (adsr->state_counter < ADSR_STATE_SUSTAIN_START) {
 			// Counter from 1 to 8: 7 steps.
 			// From 7 to 0

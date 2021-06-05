@@ -47,6 +47,9 @@ void seq_play_stream(uint8_t voices);
 /*! Requires a new frame. The call never fails. Returns a zero frame at the end of the stream, or if EOF */
 extern struct seq_frame_t seq_buf_frame;
 
+/*! Set at the stream end */
+extern uint8_t seq_end;
+
 /*! Requires a new frame to be written in `seq_buf_frame`. The call never fails. */
 void new_frame_require();
 

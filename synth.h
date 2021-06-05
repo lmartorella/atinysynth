@@ -38,15 +38,6 @@ extern const uint16_t __attribute__((weak)) synth_freq;
 struct poly_synth_t {
 	/*! Pointer to voices.  There may be up to 16 voices referenced. */
 	struct voice_ch_t voice[VOICE_COUNT];
-	/*!
-	 * Bit-field enabling given voices.  This allows selective turning
-	 * on and off of given voice channels.  If the corresponding bit is
-	 * not a 1, then that channel is not computed.
-	 *
-	 * Note no bounds checking is done, if you have only defined 4
-	 * channels, then only set bits 0-3, don't set bits 4 onwards here.
-	 */
-	CHANNEL_MASK_T enable;
 };
 
 extern struct poly_synth_t synth;
@@ -61,21 +52,10 @@ static inline int8_t poly_synth_next() {
 	int8_t sample = 0;
 #endif
 
-	CHANNEL_MASK_T mask = 1 << (VOICE_COUNT - 1);
-    struct voice_ch_t* voice = &synth.voice[VOICE_COUNT - 1];
-
-	do {
-		if (synth.enable & mask) {
-			/* Channel is enabled */
-			sample += voice_ch_next(voice);
-			if (voice->adsr.state_counter == ADSR_STATE_END) {
-				//_DPRINTF("poly %p ch=%d done\n", synth, idx);
-				synth.enable &= ~mask;
-			}
-		}
-		mask >>= 1;
-        voice--;
-	} while (mask);
+    struct voice_ch_t* voice = &synth.voice[0];
+	for (uint8_t i = VOICE_COUNT; i; i--, voice++) { 
+		sample += voice_ch_next(voice);
+	}
 
 	/* Handle clipping */
 #ifndef NO_CLIP_CHECK
