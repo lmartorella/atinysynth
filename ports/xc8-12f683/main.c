@@ -123,9 +123,11 @@ void main() {
     // Timer 2
     T2CONbits.T2CKPS = 0; // 1:1 prescaler
     T2CONbits.TMR2ON = 1; // ON
-    // Period = 20Mhz / (4 * (PR2 + 1)) / prescaler = 156kHZ
-    PR2 = 31; 
-    // Duty cycle = CCP / (4 * (PR2 + 1)). Max is 128 (7-bit)
+    // Period = 20Mhz / (4 * (PR2 + 1)) / prescaler = 19.53kHZ
+    // Duty cycle = CCP / (4 * (PR2 + 1)). Max is 1024 (10-bit)
+    // Very close to hearing range, but this allow the upper 8-bit MSB to
+    // be pushed in CCPR1L without bit shifts. The speakers will cut it.
+    PR2 = 0xff; 
     
     // PWM, active high
     CCP1CONbits.CCP1M = 0xC;
@@ -137,6 +139,7 @@ void main() {
     
     // Enable PWM output
     TRISIObits.TRISIO2 = 0;
+    CCP1CONbits.DC1B = 0;
     
     // Now CCPR1L:CCP1CONbits.DC1B is 7-bits 
     //test_freq();
@@ -150,13 +153,9 @@ void main() {
 
         while (!seq_end) {
             
-            // From +64 to -64
-            int8_t sample = seq_feed_synth() >> 1;
-            uint8_t pwm = (uint8_t)(sample + 64);
-            
-            // TODO do atomically
-            CCPR1L = pwm >> 2;
-            CCP1CONbits.DC1B = pwm & 0x3;
+            // From +128 to -128
+            int8_t sample = seq_feed_synth();
+            CCPR1L = (uint8_t)(sample) + 128;            
             
             // Wait for next sampling op
             while (!INTCONbits.T0IF);
