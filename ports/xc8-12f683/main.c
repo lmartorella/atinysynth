@@ -134,7 +134,7 @@ void main() {
 
     // Setup Timer0 for FREQ (20MHz -> 5MHz Fosc/4)
     OPTION_REGbits.PSA = 0; // prescaler 
-    OPTION_REGbits.PS = 1;  // prescaler 1:4 => 9766 / 2Hz
+    OPTION_REGbits.PS = 0;  // prescaler 1:2 => 9766
     OPTION_REGbits.T0CS = 0; // Fosc
     
     // Enable PWM output
@@ -154,8 +154,7 @@ void main() {
         while (!seq_end) {
             
             // From +128 to -128
-            int8_t sample = seq_feed_synth();
-            CCPR1L = (uint8_t)(sample) + 128;            
+            CCPR1L = (uint8_t)(seq_feed_synth()) + 128;            
             
             // Wait for next sampling op
             while (!INTCONbits.T0IF);
