@@ -8,6 +8,7 @@
 #define BITS_ADSR_RELEASE_START 1
 
 #define TUNE_DATA_SIZE 968
+#define NO_CLIP_CHECK
 #define SEQ_CHANNEL_COUNT 3
 
 extern const uint16_t tune_adsr_time_scale_refs[];

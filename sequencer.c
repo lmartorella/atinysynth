@@ -41,16 +41,24 @@ void seq_play_stream(uint8_t voices) {
     seq_end = 0;
 }
 
-void seq_feed_synth() {
+int8_t seq_feed_synth() {
+#ifndef NO_CLIP_CHECK
+	int16_t sample = 0;
+#else
+	int8_t sample = 0;
+#endif
+
     struct voice_ch_t* voice = &synth.voice[0];
-	for (uint8_t i = seq_voice_count; i; i--, voice++) { 
-        if (voice->adsr.state_counter == ADSR_STATE_END) {
+    uint8_t fed = 0;
+	for (uint8_t i = seq_voice_count; i; i--, voice++) {
+		sample += voice_ch_next(voice);
+        if (!fed && voice->adsr.state_counter == ADSR_STATE_END) {
             // Feed data
 			new_frame_require();
             if (seq_buf_frame.adsr_time_scale_1 == 0) {
                 // End-of-stream
 				seq_end = 1;
-                return;
+                continue;
             }
 
             voice_wf_set(&voice->wf, &seq_buf_frame);
@@ -58,7 +66,23 @@ void seq_feed_synth() {
 
 			// Don't overload the CPU with multiple frames per sample
 			// This will create minimum phase errors (of 1 sample period) but will keep the process real-time on slower CPUs
-			break;
+            fed = 1;
 		}
 	}
+
+	/* Handle clipping */
+#ifndef NO_CLIP_CHECK
+	if (sample > INT8_MAX) {
+		sample = INT8_MAX;
+#ifdef CHECK_CLIPPING
+		clip_count++;
+#endif
+	} else if (sample < INT8_MIN) {
+		sample = INT8_MIN;
+#ifdef CHECK_CLIPPING
+		clip_count++;
+#endif
+	}
+#endif
+	return sample;
 }

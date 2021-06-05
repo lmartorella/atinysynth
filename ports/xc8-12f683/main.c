@@ -147,19 +147,16 @@ void main() {
         tune_ptr_bits = 0;
         
         seq_play_stream(SEQ_CHANNEL_COUNT);
-        seq_feed_synth();
 
         while (!seq_end) {
             
             // From +64 to -64
-            int8_t sample = poly_synth_next() >> 1;
+            int8_t sample = seq_feed_synth() >> 1;
             uint8_t pwm = (uint8_t)(sample + 64);
             
             // TODO do atomically
             CCPR1L = pwm >> 2;
             CCP1CONbits.DC1B = pwm & 0x3;
-
-            seq_feed_synth();
             
             // Wait for next sampling op
             while (!INTCONbits.T0IF);

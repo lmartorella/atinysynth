@@ -100,7 +100,10 @@ void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream,
 	seq_feed_channels(&state);
 	int end;
 	do {
-		poly_synth_next();
+		// poly_synth_next();
+		for (uint8_t i = 0; i < VOICE_COUNT; i++) {
+			voice_ch_next(&synth.voice[i]);
+		}
 		seq_feed_channels(&state);
 
 		end = 1;
