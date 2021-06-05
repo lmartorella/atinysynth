@@ -50,7 +50,8 @@ int8_t seq_feed_synth() {
 
     struct voice_ch_t* voice = &synth.voice[0];
     uint8_t fed = 0;
-	for (uint8_t i = seq_voice_count; i; i--, voice++) {
+    uint8_t i = seq_voice_count;
+	do {
 		sample += voice_ch_next(voice);
         if (!fed && voice->adsr.state_counter == ADSR_STATE_END) {
             // Feed data
@@ -68,7 +69,9 @@ int8_t seq_feed_synth() {
 			// This will create minimum phase errors (of 1 sample period) but will keep the process real-time on slower CPUs
             fed = 1;
 		}
-	}
+        i--;
+        voice++;
+	} while (i);
 
 	/* Handle clipping */
 #ifndef NO_CLIP_CHECK

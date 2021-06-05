@@ -44,7 +44,7 @@ struct voice_ch_t {
 inline static int8_t voice_ch_next(struct voice_ch_t* const voice) {
 	adsr_next(&voice->adsr);
 	uint8_t gain = voice->adsr.gain;
-	if (gain == 8) {
+	if (gain >= 6) {
 		return 0;
 	}
 

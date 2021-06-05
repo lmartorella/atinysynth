@@ -31,7 +31,7 @@ void adsr_config(struct adsr_env_gen_t* const adsr, struct seq_frame_t* const fr
 	adsr->next_event = adsr->def.time_scale;
 	adsr->state_counter = ADSR_STATE_INIT; // 1
 	// Start from mute
-	adsr->gain = 8;
+	adsr->gain = 6;
 }
 
 /*!
@@ -44,12 +44,12 @@ void adsr_next(struct adsr_env_gen_t* const adsr) {
 	} else {
 		if (!adsr->state_counter) {
 			// Abort
-			adsr->gain = 8;
+			adsr->gain = 6;
 			return;
 		}
 		if (adsr->state_counter < ADSR_STATE_SUSTAIN_START) {
-			// Counter from 1 to 8: 7 steps.
-			// From 7 to 0
+			// Counter from 1 to 6: 5 steps.
+			// From 6 to 0
 			adsr->gain--;
 		} 
 		else if (adsr->state_counter < ADSR_STATE_DECAY_START) {

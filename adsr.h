@@ -28,7 +28,7 @@
 
 /* ADSR states, in time units. MAX_TIME_UNIT is fixed, and terminates the envelope */
 #define ADSR_STATE_INIT     		(0 + 1)
-#define ADSR_STATE_SUSTAIN_START	(8 + 1)
+#define ADSR_STATE_SUSTAIN_START	(6 + 1)
 #define ADSR_STATE_DECAY_START      (10 + 1)
 // Release start is dynamic
 #define ADSR_STATE_RELEASE_DURATION (6 * 8)
