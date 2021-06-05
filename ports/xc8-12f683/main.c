@@ -148,6 +148,11 @@ void main() {
         tune_ptr = tune_data;
         tune_ptr_end = tune_data + TUNE_DATA_SIZE - 1;
         tune_ptr_bits = 0;
+        seq_end = 0;
+        cur_voice = &synth.voice[0];
+        for (uint8_t i = 0; i < VOICE_COUNT; i++, cur_voice++) {
+            cur_voice->adsr.state_counter = 0;
+        }
         
         seq_play_stream(SEQ_CHANNEL_COUNT);
 
