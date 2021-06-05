@@ -27,10 +27,12 @@
 #define ADSR_TIME_UNITS 0x40
 
 /* ADSR states, in time units. MAX_TIME_UNIT is fixed, and terminates the envelope */
-#define ADSR_STATE_INIT     		(0x00 + 1)
-#define ADSR_STATE_SUSTAIN_START	(0x08 + 1)
+#define ADSR_STATE_INIT     		(0 + 1)
+#define ADSR_STATE_SUSTAIN_START	(8 + 1)
+#define ADSR_STATE_DECAY_START      (10 + 1)
 // Release start is dynamic
-#define ADSR_STATE_RELEASE_DURATION (6*8)
+#define ADSR_STATE_RELEASE_DURATION (6 * 8)
+#define ADSR_STATE_END				0
 
 #include "poly_cfg.h"
 
@@ -54,7 +56,7 @@ struct adsr_env_gen_t {
 	TIME_SCALE_T next_event;
 	/*! Current ADSR state / counter */
 	uint8_t state_counter;
-	/*! Present gain (0 is max, 1 is half, etc...) */
+	/*! Present negative gain (0 is max, 1 is half amplitude, so -10dB, 2 is -20dB etc...) */
 	uint8_t gain;
 };
 
@@ -66,6 +68,6 @@ void adsr_config(struct adsr_env_gen_t* const adsr, struct seq_frame_t* const fr
 /*!
  * Compute the ADSR gain as bit shift count (0 is full amplitude, 1 is half, etc...)
  */
-uint8_t adsr_next(struct adsr_env_gen_t* const adsr);
+void adsr_next(struct adsr_env_gen_t* const adsr);
 
 #endif
