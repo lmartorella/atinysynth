@@ -60,7 +60,7 @@ int8_t seq_feed_synth() {
             if (seq_buf_frame.adsr_time_scale_1 == 0) {
                 // End-of-stream
 				seq_end = 1;
-                continue;
+                break;
             }
 
             voice_wf_set(&seq_buf_frame);
