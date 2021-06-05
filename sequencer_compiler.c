@@ -108,8 +108,10 @@ void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream,
 	printf("Compiler stats:\n");
 	if (clip_count) {
 		printf("\tWARN: clip count: %d (slower)\n", clip_count);
+		*do_clip_check = 1;
 	} else {
 		printf("\tno clip (faster)\n");
+		*do_clip_check = 0;
 	}
 
 	free(state.channels);
