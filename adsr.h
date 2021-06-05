@@ -63,11 +63,11 @@ struct adsr_env_gen_t {
 /*!
  * Configure the ADSR.
  */
-void adsr_config(struct adsr_env_gen_t* const adsr, struct seq_frame_t* const frame);
+void adsr_config(struct seq_frame_t* const frame);
 
 /*!
  * Compute the ADSR gain as bit shift count (0 is full amplitude, 1 is half, etc...)
  */
-void adsr_next(struct adsr_env_gen_t* const adsr);
+void adsr_next();
 
 #endif

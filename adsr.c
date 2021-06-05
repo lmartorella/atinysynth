@@ -20,58 +20,58 @@
 
 #include "debug.h"
 #include "adsr.h"
+#include "voice.h"
 #include <stdlib.h>
 
 /*!
  * Configure the ADSR.
  */
-void adsr_config(struct adsr_env_gen_t* const adsr, struct seq_frame_t* const frame) {
-	adsr->def.release_start = frame->adsr_release_start;
-	adsr->def.time_scale = frame->adsr_time_scale_1;
-	adsr->next_event = adsr->def.time_scale;
-	adsr->state_counter = ADSR_STATE_INIT; // 1
+void adsr_config(struct seq_frame_t* const frame) {
+	cur_voice->adsr.def.release_start = frame->adsr_release_start;
+	cur_voice->adsr.next_event = cur_voice->adsr.def.time_scale = frame->adsr_time_scale_1;
+	cur_voice->adsr.state_counter = ADSR_STATE_INIT; // 1
 	// Start from mute
-	adsr->gain = 6;
+	cur_voice->adsr.gain = 6;
 }
 
 /*!
  * Compute the ADSR gain
  */
-void adsr_next(struct adsr_env_gen_t* const adsr) {
-	if (adsr->next_event) {
+void adsr_next() {
+	if (cur_voice->adsr.next_event) {
 		/* Still waiting for next event */
-		adsr->next_event--;
+		cur_voice->adsr.next_event--;
 	} else {
-		if (!adsr->state_counter) {
+		if (!cur_voice->adsr.state_counter) {
 			// Abort
-			adsr->gain = 6;
+			cur_voice->adsr.gain = 6;
 			return;
 		}
-		if (adsr->state_counter < ADSR_STATE_SUSTAIN_START) {
+		if (cur_voice->adsr.state_counter < ADSR_STATE_SUSTAIN_START) {
 			// Counter from 1 to 6: 5 steps.
 			// From 6 to 0
-			adsr->gain--;
+			cur_voice->adsr.gain--;
 		} 
-		else if (adsr->state_counter < ADSR_STATE_DECAY_START) {
+		else if (cur_voice->adsr.state_counter < ADSR_STATE_DECAY_START) {
 			// Remain to zero
 		}
-		else if (adsr->state_counter < adsr->def.release_start) {
+		else if (cur_voice->adsr.state_counter < cur_voice->adsr.def.release_start) {
 			// Then decay to 1 and stay
-			adsr->gain = 1;
+			cur_voice->adsr.gain = 1;
 		}
 		else {
 			// Decrease from 2 to 8 every 8 counters
-			if (!(adsr->state_counter & 0x7)) {
-				adsr->gain++;
+			if (!(cur_voice->adsr.state_counter & 0x7)) {
+				cur_voice->adsr.gain++;
 			}
 		} 
 
-		if (adsr->state_counter > ADSR_TIME_UNITS) {
+		if (cur_voice->adsr.state_counter > ADSR_TIME_UNITS) {
 			// 0 is the final state (fast to check)
-			adsr->state_counter = ADSR_STATE_END;
+			cur_voice->adsr.state_counter = ADSR_STATE_END;
 		} else {
-			adsr->next_event = adsr->def.time_scale;
-			adsr->state_counter++;
+			cur_voice->adsr.next_event = cur_voice->adsr.def.time_scale;
+			cur_voice->adsr.state_counter++;
 		}
 	}
 }

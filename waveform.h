@@ -100,8 +100,7 @@ void voice_wf_set_dc(struct voice_wf_gen_t* const wf_gen,
 /*!
  * Configure the generator for square wave synthesis.
  */
-void voice_wf_set_square(struct voice_wf_gen_t* const wf_gen,
-		uint16_t freq, int8_t amplitude);
+void voice_wf_set_square(uint16_t freq, int8_t amplitude);
 
 #ifdef USE_SAWTOOTH
 /*!
@@ -122,12 +121,12 @@ void voice_wf_set_triangle(struct voice_wf_gen_t* const wf_gen,
 /*!
  * Configure the generator using waveform type and common parameters
  */
-void voice_wf_set(struct voice_wf_gen_t* const wf_gen, struct seq_frame_t* const frame);
+void voice_wf_set(struct seq_frame_t* const frame);
 
 /*!
  * Retrieve the next sample from the generator.
  */
-int8_t voice_wf_next(struct voice_wf_gen_t* const wf_gen);
+int8_t voice_wf_next();
 
 /*! Setup def */
 int8_t voice_wf_setup_def(struct seq_frame_t* frame, uint16_t frequency, uint8_t amplitude, uint8_t waveform);

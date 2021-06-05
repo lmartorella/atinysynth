@@ -31,6 +31,7 @@ static uint8_t seq_voice_count;
 
 uint8_t seq_end = 0;
 struct seq_frame_t seq_buf_frame;
+struct voice_ch_t* cur_voice;
 
 void seq_play_stream(uint8_t voices) {
 #ifndef SEQ_CHANNEL_COUNT
@@ -48,12 +49,12 @@ int8_t seq_feed_synth() {
 	int8_t sample = 0;
 #endif
 
-    struct voice_ch_t* voice = &synth.voice[0];
+    cur_voice = &synth.voice[0];
     uint8_t fed = 0;
     uint8_t i = seq_voice_count;
 	do {
-		sample += voice_ch_next(voice);
-        if (!fed && voice->adsr.state_counter == ADSR_STATE_END) {
+		sample += voice_ch_next();
+        if (!fed && cur_voice->adsr.state_counter == ADSR_STATE_END) {
             // Feed data
 			new_frame_require();
             if (seq_buf_frame.adsr_time_scale_1 == 0) {
@@ -62,15 +63,15 @@ int8_t seq_feed_synth() {
                 continue;
             }
 
-            voice_wf_set(&voice->wf, &seq_buf_frame);
-            adsr_config(&voice->adsr, &seq_buf_frame);
+            voice_wf_set(&seq_buf_frame);
+            adsr_config(&seq_buf_frame);
 
 			// Don't overload the CPU with multiple frames per sample
 			// This will create minimum phase errors (of 1 sample period) but will keep the process real-time on slower CPUs
             fed = 1;
 		}
         i--;
-        voice++;
+        cur_voice++;
 	} while (i);
 
 	/* Handle clipping */
