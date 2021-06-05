@@ -117,8 +117,6 @@ void new_frame_require() {
 int main(int argc, char** argv) {
 	int voice = 0;
 
-	synth.enable = 0;
-
 	memset(synth.voice, 0, sizeof(synth.voice));
 
 	ao_sample_format format;
@@ -171,26 +169,17 @@ int main(int argc, char** argv) {
 		argc--;
 
 		/* Play out any remaining samples */
-		seq_feed_synth();
-
-		if (synth.enable)
-			_DPRINTF("----- Start playback (0x%lx) -----\n",
-					synth.enable);
-
-		while (synth.enable) {
+		while (!seq_end) {
 			int16_t* sample_ptr = samples;
-			uint16_t samples_remain = sizeof(samples)
-						/ sizeof(uint16_t);
+			uint16_t samples_remain = sizeof(samples) / sizeof(uint16_t);
 
 			/* Fill the buffer as much as we can */
-			while (synth.enable && samples_remain) {
-				_DPRINTF("enable = 0x%lx\n", synth.enable);
-				int16_t s = poly_synth_next(&synth);
+			while (!seq_end && samples_remain) {
+				int16_t s = seq_feed_synth();
 				*sample_ptr = s << 8;
 				sample_ptr++;
 				samples_sz++;
 				samples_remain--;
-				seq_feed_synth();
 			}
 			ao_play(wav_device, (char*)samples, 2*samples_sz);
 

@@ -47,11 +47,17 @@ void seq_play_stream(uint8_t voices);
 /*! Requires a new frame. The call never fails. Returns a zero frame at the end of the stream, or if EOF */
 extern struct seq_frame_t seq_buf_frame;
 
+/*! Set at the stream end */
+extern uint8_t seq_end;
+
 /*! Requires a new frame to be written in `seq_buf_frame`. The call never fails. */
 void new_frame_require();
 
-/*! Use it when `seq_play_stream` is in use, must be called at every sample */
-void seq_feed_synth();
+/*!
+ * Use it when `seq_play_stream` is in use, must be called at every sample 
+ * It call `poly_synth_next` internally.
+*/
+int8_t seq_feed_synth();
 
 /*! List of frames, used by `seq_frame_map_t` */
 struct seq_frame_list_t {

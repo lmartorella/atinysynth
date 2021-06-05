@@ -38,21 +38,21 @@ struct voice_ch_t {
 	struct voice_wf_gen_t wf;
 };
 
+extern struct voice_ch_t* cur_voice;
+
 /*!
  * Compute the next voice channel sample.
  */
-inline static int8_t voice_ch_next(struct voice_ch_t* const voice) {
-	uint8_t gain = adsr_next(&(voice->adsr));
-	_DPRINTF("ch=%p gain=%d\n", voice, -gain);
-	if (gain == 8) {
+inline static int8_t voice_ch_next() {
+	adsr_next();
+	uint8_t gain = cur_voice->adsr.gain;
+	if (gain >= 6) {
 		return 0;
 	}
 
-	int8_t value = voice_wf_next(&(voice->wf));
-	_DPRINTF("ch=%p value=%d\n", voice, value);
+	int8_t value = voice_wf_next();
 	value >>= gain;
 
-	_DPRINTF("ch=%p out=%d\n", voice, value);
 	return value;
 }
 

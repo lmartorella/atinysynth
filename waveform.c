@@ -34,7 +34,7 @@
  */
 #define PERIOD_FP_SCALE 	(4)
 
-int8_t voice_wf_next(struct voice_wf_gen_t* const wf_gen) {
+int8_t voice_wf_next() {
 #if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_DC)
 	switch(wf_gen->mode) 
 #endif
@@ -48,20 +48,20 @@ int8_t voice_wf_next(struct voice_wf_gen_t* const wf_gen) {
 #if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_DC)
 		case VOICE_MODE_SQUARE:
 #endif
-			if (wf_gen->period > 0) {
-				if ((wf_gen->period_remain >> PERIOD_FP_SCALE) == 0) {
+			if (cur_voice->wf.period > 0) {
+				if ((cur_voice->wf.period_remain >> PERIOD_FP_SCALE) == 0) {
 					/* Swap value */
-					wf_gen->int_sample = -wf_gen->int_sample;
-					wf_gen->period_remain += wf_gen->period;
+					cur_voice->wf.int_sample = -cur_voice->wf.int_sample;
+					cur_voice->wf.period_remain += cur_voice->wf.period;
 				}
-				wf_gen->period_remain -= (1 << PERIOD_FP_SCALE);
+				cur_voice->wf.period_remain -= (1 << PERIOD_FP_SCALE);
 			}
 			_DPRINTF("wf=%p mode=SQUARE amp=%d rem=%d "
 					"→ sample=%d\n",
 					wf_gen, wf_gen->amplitude,
 					wf_gen->period_remain,
 					wf_gen->sample);
-			return wf_gen->int_sample;
+			return cur_voice->wf.int_sample;
 #ifdef USE_SAWTOOTH
 		case VOICE_MODE_SAWTOOTH:
 			if ((wf_gen->period_remain >> PERIOD_FP_SCALE) == 0) {
@@ -118,30 +118,25 @@ void voice_wf_set_dc(struct voice_wf_gen_t* const wf_gen,
 }
 #endif
 
-void voice_wf_set(struct voice_wf_gen_t* const wf_gen, struct seq_frame_t* const frame) {
+void voice_wf_set(struct seq_frame_t* const frame) {
 //static void voice_wf_set_square_p(struct voice_wf_gen_t* const wf_gen, struct voice_wf_def_t* const wf_def) {
 #if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_DC)
 	wf_gen->mode = VOICE_MODE_SQUARE;
 #endif
-	wf_gen->int_sample = wf_gen->int_amplitude = frame->wf_amplitude;
-	wf_gen->period_remain = wf_gen->period = frame->wf_period;
-	_DPRINTF("wf=%p INIT mode=SQUARE amp=%d per=%d rem=%d "
-			"→ sample=%d\n",
-			wf_gen, wf_gen->amplitude, wf_gen->period,
-			wf_gen->period_remain,
-			wf_gen->sample);
+	cur_voice->wf.int_sample = cur_voice->wf.int_amplitude = frame->wf_amplitude;
+	cur_voice->wf.period_remain = cur_voice->wf.period = frame->wf_period;
 }
 
-void voice_wf_set_square_p(struct voice_wf_gen_t* const wf_gen, uint16_t period, int8_t amplitude) {
+void voice_wf_set_square_p(uint16_t period, int8_t amplitude) {
 	struct seq_frame_t frame;
 	// Half period for square generator
 	frame.wf_period = period >> 1;
 	frame.wf_amplitude = amplitude;
-	voice_wf_set(wf_gen, &frame);
+	voice_wf_set(&frame);
 }
 
-void voice_wf_set_square(struct voice_wf_gen_t* const wf_gen, uint16_t freq, int8_t amplitude) {
-	voice_wf_set_square_p(wf_gen, voice_wf_freq_to_period(freq), amplitude);
+void voice_wf_set_square(uint16_t freq, int8_t amplitude) {
+	voice_wf_set_square_p(voice_wf_freq_to_period(freq), amplitude);
 }
 
 #ifdef USE_SAWTOOTH
@@ -191,7 +186,7 @@ void voice_wf_set_triangle(struct voice_wf_gen_t* const wf_gen,
 }
 #endif
 
-void voice_wf_set_(struct voice_wf_gen_t* const wf_gen, struct voice_wf_def_t* const wf_def) {
+void voice_wf_set_(struct voice_wf_def_t* const wf_def) {
 #if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_DC)
 	switch (wf_def->mode) 
 #endif
@@ -204,7 +199,7 @@ void voice_wf_set_(struct voice_wf_gen_t* const wf_gen, struct voice_wf_def_t* c
 #if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_DC)
 		case VOICE_MODE_SQUARE:
 #endif
-			voice_wf_set_square_p(wf_gen, wf_def->period, wf_def->amplitude);
+			voice_wf_set_square_p(wf_def->period, wf_def->amplitude);
 			return;
 #ifdef USE_SAWTOOTH
 		case VOICE_MODE_SAWTOOTH:

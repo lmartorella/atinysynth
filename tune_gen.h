@@ -2,12 +2,12 @@
 
 // Tune: resources/tetris.mml
 
-#define BITS_ADSR_TIME_SCALE 4
+#define BITS_ADSR_TIME_SCALE 5
 #define BITS_WF_PERIOD 5
 #define BITS_WF_AMPLITUDE 1
 #define BITS_ADSR_RELEASE_START 1
 
-#define TUNE_DATA_SIZE 968
+#define TUNE_DATA_SIZE 1056
 #define NO_CLIP_CHECK
 #define SEQ_CHANNEL_COUNT 3
 

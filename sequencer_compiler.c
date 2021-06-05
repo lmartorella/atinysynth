@@ -47,28 +47,27 @@ struct compiler_state_t {
 
 /*! Feed the first free channel and copy the selected frame in the output stream */
 static void seq_feed_channels(struct compiler_state_t* state) {
-	intptr_t mask = 1;
+	cur_voice = &synth.voice[0];
 	int voice_idx = 0;
+
 	for (int map_idx = 0; map_idx < state->input_map->channel_count; map_idx++) {
 		const struct seq_frame_list_t* channel = &state->input_map->channels[map_idx]; 
 		// Skip empty channels
 		if (channel->count > 0) {
-			if (state->channels[voice_idx].position < channel->count && (synth.enable & mask) == 0) {
+			if (state->channels[voice_idx].position < channel->count && (cur_voice->adsr.state_counter == ADSR_STATE_END)) {
 				// Feed data
 				struct seq_frame_t* frame = &channel->frames[state->channels[voice_idx].position++];
 
-				voice_wf_set(&synth.voice[voice_idx].wf, frame);
-				adsr_config(&synth.voice[voice_idx].adsr, frame);
-
-				synth.enable |= mask;
+				voice_wf_set(frame);
+				adsr_config(frame);
 
 				state->out_stream[state->stream_position++] = *frame;
 				// Don't overload the CPU with multiple frames per sample
 				// This will create minimum phase errors (of 1 sample period) but will keep the process real-time on slower CPUs
 				break;
 			}
-			mask <<= 1;
 			voice_idx++;
+			cur_voice++;
 		}
 	}
 }
@@ -90,7 +89,9 @@ void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream,
 	*frame_stream = malloc(sizeof(struct seq_frame_t) * (*frame_count));
 
 	// Now play sequencer data, currently by channel, simulating the timing of the synth.
-	synth.enable = 0;
+	for (int i = 0; i < VOICE_COUNT; i++) {
+		synth.voice[i].adsr.state_counter = ADSR_STATE_END;
+	}
 
 	struct compiler_state_t state;
 	state.channels = malloc(sizeof(struct compiler_channel_state_t) * valid_channel_count);
@@ -100,10 +101,23 @@ void seq_compile(struct seq_frame_map_t* map, struct seq_frame_t** frame_stream,
 	state.stream_position = 0;
 
 	seq_feed_channels(&state);
-	while (synth.enable) {
-		poly_synth_next();
+	int end;
+	do {
+		// poly_synth_next();
+		for (uint8_t i = 0; i < VOICE_COUNT; i++) {
+			cur_voice = &synth.voice[i];
+			voice_ch_next();
+		}
 		seq_feed_channels(&state);
-	}
+
+		end = 1;
+		for (int i = 0; i < VOICE_COUNT; i++) {
+			if (synth.voice[i].adsr.state_counter != ADSR_STATE_END) {
+				end = 0;
+				break;
+			}
+		}
+	} while(!end);
 
 	printf("Compiler stats:\n");
 	if (clip_count) {
