@@ -1,30 +1,37 @@
-ADSR-based Polyphonic Sequencer
+ADSR-based Polyphonic Sequencer (chiptune) for PIC12/PIC16
 =================================
 
 This project is intended to be a polyphonic sequencer for use in
-embedded 8-bit microcontrollers.  It features multi-voice synthesis for
+embedded 8-bit micro-controllers.  It features multi-voice synthesis for
 multiple channels.
 
 This is a fork of the [sjlongland/atinysynth](https://github.com/sjlongland/atinysynth/) project for AT AVR MCUs, but oriented and optimized for the tiny PIC12F683 Microchip microcontroller.
 
 The goal is to implement a polyphonic tune player in only 2K instructions (containing the code *and* the tune data) and to stay in 128 bytes of RAM.
 
-Yes. 
+Spoiler: yes, that's possible, even using the free version of the [XC8 compiler](https://www.microchip.com/en-us/development-tools-tools-and-software/mplab-xc-compilers).
+
+[![chiptune](./doc/preview.png)](https://www.youtube.com/watch?v=ZJVwempHGbk)
 
 ADSR: principle of operation
 ----------------------
 
-The ADSR is a cut version of the main [sjlongland/atinysynth](https://github.com/sjlongland/atinysynth/) project.
+The ADSR is a cut-down version of the main [sjlongland/atinysynth](https://github.com/sjlongland/atinysynth/) project.
 
-Instead of allowing variable ADSR parameters, this fork implement a quasi-fixed envelope function, using only bit shift operators.
+Instead of allowing variable ADSR parameters, this fork implement a quasi-fixed envelope function, using only bit shift operators to avoid multiplications (that in a RISC MCU would kill the performances).
 
+A clever way to optimize this is to follow the natural logarithmic scale of the human hearing, and use exponential gain instead of linear ones. With this approximation, the gain can be seen as a number of bit shifts:
 
-Waveform: principle of operation
-----------------------
+```c
+uint8_t gain = adsr_next(&(voice->adsr));
+int8_t value = voice_wf_next(&(voice->wf));
+// 8-bit domain again!
+value >>= gain;
+```
 
-The only waveform implemented in this fork is the square wave.
+<img src="./doc/wave.png" alt="waveform" width="300px">
 
-Refer the main [sjlongland/atinysynth](https://github.com/sjlongland/atinysynth/) project for principle of operation.
+The approximation, so evident and ugly in the linear scale, is not actually so bad once played through a speaker.
 
 ## Sequencer
 
@@ -38,9 +45,9 @@ In order to arrange the steps of all the channels in the correct sequence, a *se
 
 This compiler is not optimized to run on a microcontroller (it requires dynamic memory allocation), but to be run on a PC in order to obtain compact binary files to be played by the sequencer on the host MCU.
 
-To save memory for the tiniest 8-bit microcontrollers, the sequencer stream header and the steps are defined in a compact binary format:
+To save memory for the tiniest 8-bit micro-controllers, the sequencer stream header and the steps are defined in a compact binary format:
 
-```
+```c
 // A frame
 struct seq_frame_t {
     /*! Envelope definition */
@@ -96,34 +103,43 @@ value >>= 8;
 
 This above happens for each voice for each sample.
 
-A clever way to optimize this is to follow the natural logarithmic scale of the human hearing, and use exponential gain instead of linear ones. With this approximation, the gain can be seen as a number of bit shifts:
+## Banning (most of) stack variables
 
-```c
-uint8_t gain = adsr_next(&(voice->adsr));
-int8_t value = voice_wf_next(&(voice->wf));
-// 8-bit domain again!
-value >>= gain;
+The low-specs PIC MCUs have a tiny hardware stack that can only arrange 8 levels of instruction pointers. 
+
+However the XC8 compiler does a great job in implementing a software stack using global variables. The compiler analyze the full application call graph (every branch) and arrange the local variables in the global memory, sharing the memory used by locals declared in different branches.
+
+This is great, and it works on the free version of XC8 (that doesn't optimize the code for speed).
+
+However, every access to local variables is often translated in duplicated instructions in the free version:
+
+```asm
+  1781                           ;../../sequencer.c: 53:     uint8_t i = 3;
+  1782  018A  3003               	movlw	3
+  1783  018B  00FC               	movwf	??_seq_feed_synth
+  1784  018C  087C               	movf	??_seq_feed_synth,w
+  1785  018D  00D6               	movwf	seq_feed_synth@i
 ```
 
-<img src="./doc/wave.png" alt="waveform" width="300px">
+where the assignment of a the `seq_feed_synth@i` local requires 4 instructions, two of them playing the `W` value in way too much exuberant mood.
 
-The approximation, so evident and ugly in the linear scale, is not actually so bad once played through a speaker.
+So the solution is to "uglify" the source code, and use more global variables than ever. For example, the pointer of the active voice in the voice loop is kept global to save it from being copied over in the waveform and ADSR state machines.
 
-## Bit compressor
+## Bit compressor: step 1
 
 After the sequencer produced the stream of frames, now we need to squeeze it even more to fit in the code EEPROM (2K words of 14 bits).
 
 Unfortunately the base level PIC12 doesn't expose any instructions to access to code memory at runtime. So packing the stream in 14-bits words is not an option.
 
-However, the XC8 compiler is great in implementing constant array of values in code memory, using the 'Computed GOTO' technique as described in the Microchip datasheet and hardcoded `RETLW` instructions.
+However, the XC8 compiler is great in implementing constant array of values in code memory, using the 'Computed GOTO' technique as described in the Microchip data-sheet and hardcoded `RETLW` instructions.
 
 With that, it is possible to put constant data packed as bytes in the code memory.
 
 So the goal is to reduce the frame packet in - say - 2 bytes each, adding only a little bit more of computational required at runtime.
 
-Analyizing the frame structure of a typical tune, we can say that the total _number_ of different notes and lengths is very less than the length of the whole tune.
+Analyzing the frame structure of a typical tune, we can say that the total _number_ of different notes and lengths is very less than the length of the whole tune.
 
-So the compressor stage is simply mapping all the possible notes, lengths, and other frame definition values in tables that will be used to deferencing the real value.
+So the compressor stage is simply mapping all the possible notes, lengths, and other frame definition values in tables that will be used to dereferencing the real value.
 
 The result is then produced _as direct C source for XC8_. Here an example:
 
@@ -135,7 +151,7 @@ struct tune_frame_t {
 	uint8_t wf_period : 4;
 	uint8_t wf_amplitude : 1;
 	uint8_t adsr_release_start : 2;
-};
+}; // wow! 9 bits!
 
 const uint16_t tune_adsr_time_scale_refs[] = {
 	0x0, 0x7d, 0x1f4, 
@@ -153,6 +169,7 @@ const uint8_t tune_adsr_release_start_refs[] = {
 	0x0, 0x2f, 0x37, 0x3f, 
 };
 
+// However, 2 words per frame..
 const struct tune_frame_t tune_data[] = {
 	{ 1, 13, 1, 2 },
 	{ 1, 12, 1, 2 },
@@ -175,6 +192,18 @@ So the `scale.mml` example only uses two different amplitudes, plus the 0x0 used
 The note periods require 4 bits, the ADSR envelope only 2 (only 3 different envelope used), etc..
 
 The total size of a packet dropped now to 9 bits. Without any other complex bit-level stream manipulation, the XC8 compiler will layout the necessary code to push the tune data in EEPROM (alongside with the ref tables), requiring only 2 bytes per notes.
+
+## Bit compressor: step 2
+
+But the selected song (Tetris A, three voices) was however too big to fit in the 2K memory alongside the generator code.
+
+And, by the way, wasting so many bits in packing frames in 2-byte packets was a shame.
+
+So the last optimization step is to pack the frames in a bit-stream of fixed-packet sizes. This requires a little more complication in reading frames from memory, but this allows a 703 frames song to stay in 1056 bytes (so 1056 instructions of the 2K total memory).
+
+<img src="./doc/mem.png" alt="waveform" width="300px">
+
+And it uses only 72 bytes of RAM!
 
 # Appendixes
 
@@ -240,7 +269,7 @@ You need the latest version of [MPLAB IDE](https://www.microchip.com/en-us/devel
 
 The project is optimized to be built even with the __free version__ of the [XC8 compiler](https://www.microchip.com/en-us/development-tools-tools-and-software/mplab-xc-compilers). Obviously using the PRO version you will be able to pack more tune data in the EEPROM.
 
-The tune is stored in the rest of the program memory left, packed in the 14-bit wide words in order to squeeze the MCU to the max.
+The tune is stored in the rest of the program memory left, packed in a stream of bits in order to squeeze the MCU to the max.
 
 ### PC port (`pc`)
 
