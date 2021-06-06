@@ -24,14 +24,14 @@ static uint8_t tune_ptr_bits;
 
 // Return it unmasked
 static uint8_t read_bits(uint8_t bits) {
-    uint16_t buffer = *tune_ptr + (*(tune_ptr + 1) << 8);
+    uint16_t buffer = *tune_ptr + (uint16_t)(*(tune_ptr + 1) << 8);
     buffer >>= tune_ptr_bits;
     tune_ptr_bits += bits;
     if (tune_ptr_bits >= 8) {
         tune_ptr_bits -= 8;
         tune_ptr++;
     }
-    return buffer;
+    return (uint8_t)buffer;
 }
 
 // Slow

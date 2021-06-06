@@ -1,6 +1,6 @@
 /*!
  * Polyphonic synthesizer for microcontrollers.  ADSR Envelope generator.
- * (C) 2017 Stuart Longland
+ * (C) 2017 Stuart Longland - Luciano Martorella
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@
 #ifndef _ADSR_H
 #define _ADSR_H
 
-#include "debug.h"
 #include "sequencer.h"
 #include <stdint.h>
 

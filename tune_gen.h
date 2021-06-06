@@ -1,5 +1,6 @@
 #include "sequencer.h"
 
+// Auto-generated code. Don't modify
 // Tune: resources/tetris.mml
 
 #define BITS_ADSR_TIME_SCALE 5
@@ -13,7 +14,7 @@
 
 extern const uint16_t tune_adsr_time_scale_refs[];
 extern const uint16_t tune_wf_period_refs[];
-extern const uint8_t tune_wf_amplitude_refs[];
+extern const int8_t tune_wf_amplitude_refs[];
 extern const uint8_t tune_adsr_release_start_refs[];
 extern const uint8_t tune_data[TUNE_DATA_SIZE];
 

@@ -35,17 +35,6 @@ struct voice_wf_gen_t {
 			/*! Amplitude sample */
 			int8_t int_amplitude;
 		};
-#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE)
-		// For linear gen and noise, use 16-bit fixed-point + amplitude step
-		struct {
-			/*! Waveform output sample in fixed-point */
-			int16_t fp_sample;
-			/*! Amplitude sample in fixed point */
-			int16_t fp_amplitude;
-			/*! Amplitude step for TRIANGLE and SAWTOOTH */
-			int16_t fp_step;
-		};
-#endif
 	};
 	/*! Samples to next waveform period (12.4 fixed point) */
 	uint16_t period_remain;
@@ -54,32 +43,12 @@ struct voice_wf_gen_t {
 	 * (Half period for SQUARE and TRIANGLE)
 	 */
 	uint16_t period;
-#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_DC)
-	/*! Waveform generation mode */
-	uint8_t mode;
-#endif
 };
-
-/* Waveform generation modes */
-#ifdef USE_DC
-#define VOICE_MODE_DC		(0)
-#endif
-#define	VOICE_MODE_SQUARE	(1)
-#ifdef USE_SAWTOOTH
-#define VOICE_MODE_SAWTOOTH	(2)
-#endif
-#ifdef USE_TRIANGLE
-#define VOICE_MODE_TRIANGLE	(3)
-#endif
 
 /**
  * The Waveform definition. 4 bytes.
  */ 
 struct voice_wf_def_t {
-#if defined(USE_SAWTOOTH) || defined(USE_TRIANGLE) || defined(USE_DC)
-	/*! Waveform generation mode, see VOICE_MODE_ enumerated values */
-	uint8_t mode;
-#endif
 	/*! Waveform amplitude (7-bit) */
 	int8_t amplitude;
 	/*! Waveform full period as `sample_freq / frequency`, or zero for pauses */
@@ -88,35 +57,6 @@ struct voice_wf_def_t {
 
 /* Compute frequency period of a generic wave */
 uint16_t voice_wf_freq_to_period(uint16_t frequency);
-
-#ifdef USE_DC
-/*!
- * Configure the generator for a DC offset synthesis.
- */
-void voice_wf_set_dc(struct voice_wf_gen_t* const wf_gen,
-		int8_t amplitude);
-#endif
-
-/*!
- * Configure the generator for square wave synthesis.
- */
-void voice_wf_set_square(uint16_t freq, int8_t amplitude);
-
-#ifdef USE_SAWTOOTH
-/*!
- * Configure the generator for sawtooth wave synthesis.
- */
-void voice_wf_set_sawtooth(struct voice_wf_gen_t* const wf_gen,
-		uint16_t freq, int8_t amplitude);
-#endif
-
-#ifdef USE_TRIANGLE
-/*!
- * Configure the generator for sawtooth wave synthesis.
- */
-void voice_wf_set_triangle(struct voice_wf_gen_t* const wf_gen,
-		uint16_t freq, int8_t amplitude);
-#endif
 
 /*!
  * Configure the generator using waveform type and common parameters
@@ -129,9 +69,6 @@ void voice_wf_set(struct seq_frame_t* const frame);
 int8_t voice_wf_next();
 
 /*! Setup def */
-int8_t voice_wf_setup_def(struct seq_frame_t* frame, uint16_t frequency, uint8_t amplitude, uint8_t waveform);
+int8_t voice_wf_setup_def(struct seq_frame_t* frame, uint16_t frequency, int8_t amplitude);
 
 #endif
-/*
- * vim: set sw=8 ts=8 noet si tw=72
- */

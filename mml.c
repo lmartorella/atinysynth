@@ -1,5 +1,5 @@
 /*!
- * Polyphonic synthesizer for microcontrollers.  MML compiler.
+ * Polyphonic synthesizer for microcontrollers.  MML parser.
  * (C) 2021 Luciano Martorella
  *
  * This program is free software; you can redistribute it and/or modify
@@ -21,7 +21,6 @@
 #include "mml.h"
 #include "synth.h"
 #include "sequencer.h"
-#include "debug.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,7 +49,7 @@ static void init_stream_channel(int channel) {
 	frame_map.channels[channel].frames = malloc(sizeof(struct seq_frame_t) * 16);
 }
 
-static int add_channel_frame(int channel, int frequency, int time_scale, int volume, double articulation, int waveform, int edit_last_duration) {
+static int add_channel_frame(int channel, int frequency, int time_scale, int volume, double articulation, int edit_last_duration) {
 	// New channel?
 	if (channel >= frame_map.channel_count) {
 		int old_count = frame_map.channel_count;
@@ -76,18 +75,12 @@ static int add_channel_frame(int channel, int frequency, int time_scale, int vol
 	struct seq_frame_t* frame = &list->frames[i];
 
     if (!frequency) {
-#ifdef USE_DC
-        p->waveform_def.amplitude = 0;
-        p->waveform_def.mode = VOICE_MODE_DC;
-#else
-        // Only square supports pause
-		if (!voice_wf_setup_def(frame, 0, 0, VOICE_MODE_SQUARE)) {
+		if (!voice_wf_setup_def(frame, 0, 0)) {
 			error_handler("Can't pack frame: pause", line, pos);
 			return 0;
 		}
-#endif
     } else {
-		if (!voice_wf_setup_def(frame, frequency, volume, waveform)) {
+		if (!voice_wf_setup_def(frame, frequency, volume)) {
 			error_handler("Can't pack frame: waveform", line, pos);
 			return 0;
 		}
@@ -160,7 +153,6 @@ struct mml_channel_state_t {
 	int tempo;
 	int volume;
 	double articulation;
-	int waveform;
 	// Active in current MML parsing line
 	int isActive;
 	// Running time in seconds and time units. Used to round note duration and not accumulate errors (skew between channels).
@@ -205,7 +197,6 @@ static void enable_channel(int channel) {
 		mml_channel_states[channel].tempo = 120;
 		mml_channel_states[channel].volume = 63;
 		mml_channel_states[channel].articulation = ARTICULATION_NORMAL;
-		mml_channel_states[channel].waveform = VOICE_MODE_SQUARE;
 		mml_channel_states[channel].running_time.seconds = 0;
 		mml_channel_states[channel].running_time.time_units = 0;
 	}
@@ -388,34 +379,6 @@ static int mml_parse(const char* content) {
 			}
 			pos++;
 			content++;
-		} else if (code == 'w') {
-			// Waveform
-			int waveform;
-			switch (*content) {
-				case 's': 
-					waveform = VOICE_MODE_SQUARE;
-					break;
-#ifdef USE_SAWTOOTH
-				case 'w': 
-					waveform = VOICE_MODE_SAWTOOTH;
-					break;
-#endif
-#ifdef USE_TRIANGLE
-				case 't': 
-					waveform = VOICE_MODE_TRIANGLE;
-					break;
-#endif
-				default:
-					error_handler("Invalid waveform", line, pos);
-					return 1;
-			}
-			for (int i = 0; i < mml_channel_count; i++) {
-				if (mml_channel_states[i].isActive) {
-					mml_channel_states[i].waveform = waveform;
-				}
-			}
-			pos++;
-			content++;
 		} else if ((isPause = (code == 'p' || code == 'r')) || (isNoteCode = code == 'n') || (code >= 'a' && code <= 'g')) {
 			// Note or pause
 			int length = -1;
@@ -488,7 +451,7 @@ static int mml_parse(const char* content) {
 					int frequency = isPause ? 0 : (isNoteCode ? get_freq_from_code(noteCode) : get_freq_from_note(code, sharp, mml_channel_states[i].octave));
 					int time_scale = get_adsr_time_scale(&mml_channel_states[i], length < 0 ? mml_channel_states[i].default_length : length, (length < 0 && !dot) ? mml_channel_states[i].default_length_dot : dot);
 					
-					if (!add_channel_frame(i, frequency, time_scale, mml_channel_states[i].volume, mml_channel_states[i].articulation, mml_channel_states[i].waveform, join)) {
+					if (!add_channel_frame(i, frequency, time_scale, mml_channel_states[i].volume, mml_channel_states[i].articulation, join)) {
 						return 1;
 					}
 				}

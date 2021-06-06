@@ -19,7 +19,6 @@
  */
 
 #include "synth.h"
-#include "debug.h"
 #include "sequencer.h"
 #include "mml.h"
 #include "codegen.h"
@@ -152,14 +151,12 @@ int main(int argc, char** argv) {
 			const char* name = argv[1];
 			argv++;
 			argc--;
-			_DPRINTF("compiling MML %s\n", name);
 			
 			int voice_count;
 			if (process_mml(name, &voice_count)) {
 				return 1;
 			}
 
-			_DPRINTF("playing sequencer stream\n");
 			stream_pos = 0;
 			stream_pos_bit = 0;
 

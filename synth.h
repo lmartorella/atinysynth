@@ -20,7 +20,6 @@
 #ifndef _SYNTH_H
 #define _SYNTH_H
 #include "voice.h"
-#include "debug.h"
 
 #ifndef SYNTH_FREQ
 /*!

@@ -1,5 +1,5 @@
 /*!
- * Tune compressor and code generator for Polyphonic synthesizer for microcontrollers.
+ * Bit-stream C code generator for Polyphonic synthesizer for microcontrollers.
  * (C) 2021 Luciano Martorella
  *
  * This program is free software; you can redistribute it and/or modify

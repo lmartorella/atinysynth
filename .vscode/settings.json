@@ -1,9 +1,0 @@
-{
-    "files.associations": {
-        "debug.h": "c",
-        "sequencer.h": "c",
-        "synth.h": "c",
-        "adsr.h": "c",
-        "typeinfo": "c"
-    }
-}

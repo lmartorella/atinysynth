@@ -1,5 +1,5 @@
 /*!
- * Polyphonic synthesizer for microcontrollers.
+ * Stream sequencer Polyphonic synthesizer for microcontrollers.
  * (C) 2021 Luciano Martorella
  *
  * This program is free software; you can redistribute it and/or modify
@@ -32,7 +32,7 @@ struct seq_frame_t {
     /*! Waveform full period as `sample_freq / frequency`, or zero for pauses */
     uint16_t wf_period;
     /*! Waveform amplitude */
-    uint8_t wf_amplitude;
+    int8_t wf_amplitude;
     /*! When the release period starts, time units over the ADSR_TIME_UNITS scale */
     uint8_t adsr_release_start;
 };

@@ -1,5 +1,5 @@
 /*!
- * Tune compressor and code generator for Polyphonic synthesizer for microcontrollers.
+ * Bit-stream C code generator for Polyphonic synthesizer for microcontrollers.
  * (C) 2021 Luciano Martorella
  *
  * This program is free software; you can redistribute it and/or modify
@@ -41,6 +41,8 @@ int codegen_write(const char* tune_name, struct bit_stream_t* stream, int channe
 	}
 
 	fprintf(hSrc, "#include \"sequencer.h\"\n\n");
+
+	fprintf(hSrc, "// Auto-generated code. Don't modify\n");
 	fprintf(hSrc, "// Tune: %s\n\n", tune_name);
 
 	fprintf(hSrc, "#define BITS_ADSR_TIME_SCALE %d\n", stream->refs_adsr_time_scale.bit_count);
@@ -56,7 +58,7 @@ int codegen_write(const char* tune_name, struct bit_stream_t* stream, int channe
 
     fprintf(hSrc, "extern const uint16_t tune_adsr_time_scale_refs[];\n");
     fprintf(hSrc, "extern const uint16_t tune_wf_period_refs[];\n");
-    fprintf(hSrc, "extern const uint8_t tune_wf_amplitude_refs[];\n");
+    fprintf(hSrc, "extern const int8_t tune_wf_amplitude_refs[];\n");
     fprintf(hSrc, "extern const uint8_t tune_adsr_release_start_refs[];\n");
     fprintf(hSrc, "extern const uint8_t tune_data[TUNE_DATA_SIZE];\n\n");
 
@@ -70,11 +72,13 @@ int codegen_write(const char* tune_name, struct bit_stream_t* stream, int channe
 		return 1;
 	}
 	fprintf(cSrc, "#include \"tune_gen.h\"\n\n");
+
+	fprintf(hSrc, "// Auto-generated code. Don't modify\n");
 	fprintf(cSrc, "// Tune: %s\n\n", tune_name);
 
     distribution_codegen(cSrc, "tune_adsr_time_scale_refs", "uint16_t", &stream->refs_adsr_time_scale);
     distribution_codegen(cSrc, "tune_wf_period_refs", "uint16_t", &stream->refs_wf_period);
-    distribution_codegen(cSrc, "tune_wf_amplitude_refs", "uint8_t", &stream->refs_wf_amplitude);
+    distribution_codegen(cSrc, "tune_wf_amplitude_refs", "int8_t", &stream->refs_wf_amplitude);
     distribution_codegen(cSrc, "tune_adsr_release_start_refs", "uint8_t", &stream->refs_adsr_release_start);
 
     fprintf(cSrc, "const uint8_t tune_data[TUNE_DATA_SIZE] = {\n\t");

@@ -1,5 +1,5 @@
 /*!
- * Polyphonic synthesizer for microcontrollers.  Sequencer code.
+ * Bit-stream compressor for sequencer, Polyphonic synthesizer for microcontrollers.
  * (C) 2021 Luciano Martorella
  *
  * This program is free software; you can redistribute it and/or modify
@@ -18,7 +18,6 @@
  * MA  02110-1301  USA
  */
 
-#include "debug.h"
 #include "sequencer.h"
 #include "synth.h"
 #include <math.h>

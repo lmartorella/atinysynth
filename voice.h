@@ -22,7 +22,6 @@
 
 #include "waveform.h"
 #include "adsr.h"
-#include "debug.h"
 
 /*!
  * Voice channel state.  30 bytes.
