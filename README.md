@@ -1,17 +1,18 @@
-ADSR-based Polyphonic Sequencer (chiptune) for PIC12/PIC16
+ADSR-based Polyphonic Sequencer for tiny PIC12/PIC16
 =================================
 
 This project is intended to be a polyphonic sequencer for use in
-embedded 8-bit micro-controllers.  It features multi-voice synthesis for
-multiple channels.
+embedded 8-bit micro-controllers.  It features multi-channel direct synthesis with ADSR envelope, with a handy MML compiler.
 
-This is a fork of the [sjlongland/atinysynth](https://github.com/sjlongland/atinysynth/) project for AT AVR MCUs, but oriented and optimized for the tiny PIC12F683 Microchip microcontroller.
+This is a fork of the [sjlongland/atinysynth](https://github.com/sjlongland/atinysynth/) project for AT AVR MCUs, but optimized for the tiniest PIC12xxx Microchip microcontroller.
 
 The goal is to implement a polyphonic tune player in only 2K instructions (containing the code *and* the tune data) and to stay in 128 bytes of RAM.
 
 Spoiler: yes, that's possible, even using the free version of the [XC8 compiler](https://www.microchip.com/en-us/development-tools-tools-and-software/mplab-xc-compilers).
 
 [![chiptune](./doc/preview.png)](https://www.youtube.com/watch?v=ZJVwempHGbk)
+
+_1:17 Korobeiniki (a.k.a Tetris A-type tune), 3 voices, 9.7kHz sampling rate, total size code+tune: 1771 code words, 72 RAM bytes, on a 8-pin PIC12F683_
 
 ADSR: principle of operation
 ----------------------
@@ -25,27 +26,28 @@ A clever way to optimize this is to follow the natural logarithmic scale of the 
 ```c
 uint8_t gain = adsr_next(&(voice->adsr));
 int8_t value = voice_wf_next(&(voice->wf));
-// 8-bit domain again!
+// 8-bit domain
 value >>= gain;
 ```
 
 <img src="./doc/wave.png" alt="waveform" width="300px">
 
-The approximation, so evident and ugly in the linear scale, is not actually so bad once played through a speaker.
+Every bit shift is approximately -10dB of gain.
+
+The approximation of a continuous fade, so evident and ugly in the linear scale, is actually not so bad once played through a speaker.
+
+> Since the PIC12/PIC16 doesn't have hardware support for multiple bit-shift, shifting is a O(N) operation. Limiting the fade to 5 or 6 bits (-50/-60dB) is necessary to avoid drop of performance and higher sampling rates.
+
+Due to RAM limitation, every note only uses two dimensions for the ADSR envelope:
+
+- time scale (number of samples between a state change);
+- release start (the state machine counter at which the Release phase starts). This allows "staccato" and "legato" music modes (see MML support below).
 
 ## Sequencer
 
-Since the synthesizer state machine is effective in defining when a "note" envelope is terminated, it is then possible to store all the subsequent "notes" in a stream of consecutive *steps*. Each step contains a pair of waveform settings and ADSR settings. 
+Since the synthesizer state machine is effective in defining when a "note" envelope is terminated, it is then possible to store all the subsequent "notes" in a stream of consecutive *frames*. Each frame contains a pair of waveform settings (period and amplitude) and the ADSR parameters (time scale and release start). 
 
-This allow polyphonic tunes to be "pre-compiled" and stored in small binary files, or microcontroller EEPROM, and to be accessed in serial fashion.
-
-Each tune are stored in a way that each frame in the stream should feed the next available channel with the `enable` flag of the `struct poly_synth_t` structure reset.
-
-In order to arrange the steps of all the channels in the correct sequence, a *sequencer compiler* has to be run on all the channel steps, and sort it correctly using an instance of the synth configured in the exact way of the target system (e.g. same sampling rate, same number of voices, etc...).
-
-This compiler is not optimized to run on a microcontroller (it requires dynamic memory allocation), but to be run on a PC in order to obtain compact binary files to be played by the sequencer on the host MCU.
-
-To save memory for the tiniest 8-bit micro-controllers, the sequencer stream header and the steps are defined in a compact binary format:
+This allow polyphonic tunes to be "pre-compiled" and stored in small binary files (microcontroller internal EEPROM or serial EEPROM), and to be accessed in serial fashion.
 
 ```c
 // A frame
@@ -57,79 +59,19 @@ struct seq_frame_t {
 };
 ```
 
-where `adsr_env_def_t` is the argument for the `adsr_config`, and `voice_wf_def_t` is the minimum set of arguments to initialize a waveform.
+Each tune are stored in a way that each frame in the stream should feed the next available channel when the ADSR ends.
 
-In order to save computational-demanding 16-bit division operations on 8-bit targets, the waveform frequency in the definition is expressed as waveform period instead of frequency in Hz, to allow faster play at runtime.
+In order to arrange the steps of all the channels in the correct sequence, a *sequencer compiler* has to be run on all the channel steps, and sort it correctly using an instance of the synth configured in the exact way of the target system (e.g. same sampling rate, same number of voices, etc...).
 
-This requires the sequencer compiler to known in advance the target sampling rate.
-
-## Banning *mul*s
-
-The free version of the XC8 compiler (like any other non-optimized compiler for CPUs without native addressing with displacement) would produce the `_bmul` software implementation when a for-loop is written in this manner:
-
-```c
-uint8_t i = 0;
-for (; i < MAX; i++) { 
-    // ....
-    consume(synth.voice[i].adsr);
-}
-```
-
-The multiplication is used to compute the displacement of the target voice, and it is especially slow if the size of the `struct voice_ch_t` is not a power of 2.
-
-The same for-loop above written as:
-
-```c
-uint8_t i = 0;
-struct voice_ch_t* ptr = &synth.voice[0];
-for (; i < MAX; i++, ptr++) { 
-    // ....
-    consume(ptr->adsr);
-}
-```
-is insanely faster (since it is implemented with simply additions and a temporary 8-bit pointer variable), and will save code space not producing the `_bmul` implementation.
-
-Now the remaining integer multiplication is the original ADSR modulation:
-
-```c
-uint8_t amplitude = adsr_next(&(voice->adsr));
-// Upscale...
-int16_t value = voice_wf_next(&(voice->wf));
-// 16-bit integer mul
-value *= amplitude;
-// and then division by 256
-value >>= 8;
-```
-
-This above happens for each voice for each sample.
-
-## Banning (most of) stack variables
-
-The low-specs PIC MCUs have a tiny hardware stack that can only arrange 8 levels of instruction pointers. 
-
-However the XC8 compiler does a great job in implementing a software stack using global variables. The compiler analyze the full application call graph (every branch) and arrange the local variables in the global memory, sharing the memory used by locals declared in different branches.
-
-This is great, and it works on the free version of XC8 (that doesn't optimize the code for speed).
-
-However, every access to local variables is often translated in duplicated instructions in the free version:
-
-```asm
-  1781                           ;../../sequencer.c: 53:     uint8_t i = 3;
-  1782  018A  3003               	movlw	3
-  1783  018B  00FC               	movwf	??_seq_feed_synth
-  1784  018C  087C               	movf	??_seq_feed_synth,w
-  1785  018D  00D6               	movwf	seq_feed_synth@i
-```
-
-where the assignment of a the `seq_feed_synth@i` local requires 4 instructions, two of them playing the `W` value in way too much exuberant mood.
-
-So the solution is to "uglify" the source code, and use more global variables than ever. For example, the pointer of the active voice in the voice loop is kept global to save it from being copied over in the waveform and ADSR state machines.
+This compiler (`sequencer_compiler.c`) is not meant to run on the target microcontroller (it requires dynamic memory allocation), but to be run on a PC in order to obtain compact binary files to be played by the sequencer on the host MCU.
 
 ## Bit compressor: step 1
 
 After the sequencer produced the stream of frames, now we need to squeeze it even more to fit in the code EEPROM (2K words of 14 bits).
 
-Unfortunately the base level PIC12 doesn't expose any instructions to access to code memory at runtime. So packing the stream in 14-bits words is not an option.
+> The data EEPROM of a tiny PIC12/PIC16 is often too small to fit a tune (usually 256 bytes).
+
+Unfortunately the base level PIC12 doesn't expose any instructions to access to code memory at runtime, and hence use the whole 14 bits for every word.
 
 However, the XC8 compiler is great in implementing constant array of values in code memory, using the 'Computed GOTO' technique as described in the Microchip data-sheet and hardcoded `RETLW` instructions.
 
@@ -169,7 +111,7 @@ const uint8_t tune_adsr_release_start_refs[] = {
 	0x0, 0x2f, 0x37, 0x3f, 
 };
 
-// However, 2 words per frame..
+// 2 words per frame..
 const struct tune_frame_t tune_data[] = {
 	{ 1, 13, 1, 2 },
 	{ 1, 12, 1, 2 },
@@ -187,23 +129,99 @@ const struct tune_frame_t tune_data[] = {
 };
 ```
 
+> `const` tells XC8 to place these data in the program memory.
+
 So the `scale.mml` example only uses two different amplitudes, plus the 0x0 used by pauses, so it requires 2 bits per frames.
 
 The note periods require 4 bits, the ADSR envelope only 2 (only 3 different envelope used), etc..
 
 The total size of a packet dropped now to 9 bits. Without any other complex bit-level stream manipulation, the XC8 compiler will layout the necessary code to push the tune data in EEPROM (alongside with the ref tables), requiring only 2 bytes per notes.
 
+## Banning *mul*s
+
+The free version of the XC8 compiler (like any other non-optimized compiler for CPUs without native addressing with displacement) would produce the `_bmul` software implementation when a for-loop is written in this manner:
+
+```c
+uint8_t i = 0;
+for (; i < MAX; i++) { 
+    // ....
+    consume(synth.voice[i].adsr);
+}
+```
+
+The multiplication is used to compute the displacement of the target voice given `i` at each cycle, and it is especially slow if the size of the `struct voice_ch_t` is not a power of 2. In addition, the `_bmul` implementation will use precious code memory.
+
+The same for-loop above written as:
+
+```c
+uint8_t i = 0;
+struct voice_ch_t* ptr = &synth.voice[0];
+for (; i < MAX; i++, ptr++) { 
+    // ....
+    consume(ptr->adsr);
+}
+```
+
+is insanely faster (since it is implemented with simply additions and a temporary 8-bit pointer variable), and will save code space not producing the `_bmul` implementation.
+
+## Banning (most of) stack variables
+
+The low-specs PIC MCUs have a tiny hardware stack that can usually only arrange 8 levels of instruction pointers. 
+
+However the XC8 compiler does a great job in implementing a software stack using global variables. The compiler analyze the full application call graph (every branch) and arrange the local variables in the global memory, sharing the memory used by locals declared in different branches.
+
+This is great, and it works on the free version of XC8 (that doesn't optimize the code for speed).
+
+However, every access to local variables is often translated in duplicated instructions <u>in the free version</u>:
+
+```asm
+     ;../../sequencer.c: 53:     uint8_t i = 3;
+       	movlw	3
+       	movwf	??_seq_feed_synth
+       	movf	??_seq_feed_synth,w
+       	movwf	seq_feed_synth@i
+```
+
+where the assignment of a the `seq_feed_synth@i` local requires 4 instructions, two of them playing the `W` value in way too much exuberant mood.
+
+So the solution is to "uglify" the source code, and use more global variables than ever. For example, the pointer of the active voice in the voice loop is kept global to save it from being copied over in the waveform and ADSR state machines.
+
 ## Bit compressor: step 2
 
-But the selected song (Tetris A, three voices) was however too big to fit in the 2K memory alongside the generator code.
+But the selected song for the demo (Korobeiniki, Tetris A-type with three voices) was however too big to fit in the 2K memory alongside the generator code.
 
 And, by the way, wasting so many bits in packing frames in 2-byte packets was a shame.
 
 So the last optimization step is to pack the frames in a bit-stream of fixed-packet sizes. This requires a little more complication in reading frames from memory, but this allows a 703 frames song to stay in 1056 bytes (so 1056 instructions of the 2K total memory).
 
+```
+Compiler stats:
+        no clip (faster)
+Distribution chart for 703 frames:
+        adsr_time_scale: 18 (5 bits)
+        wf_period: 23 (5 bits)
+        wf_amplitude: 2 (1 bits)
+        adsr_release_start: 2 (1 bits)
+Stream size: 1056 bytes
+```
+
 <img src="./doc/mem.png" alt="waveform" width="300px">
 
 And it uses only 72 bytes of RAM!
+
+## PWM output
+
+Most recent PIC12/PIC16 MCUs has native support for PWM output, so the waveform output can be written with a single instruction.
+
+However, the registries used by the PWM modules are often arranged across 2 registers. The better performance can be reached using the higher 8 bits (of 10) with a single register access, leave the least significant bits as 0, and use a PWM frequency that can span exactly 10 bits of counter.
+
+This can be reached on a PIC12F683 using a 20MHz external clock source (the maximum allowed), 1:1 prescaler and 2^10 as base counter, for a resulting 19.5kHz of modulation.
+
+This is not ideal in a Hi-Fi system, but it usually outside the audible spectrum: with small speakers the modulation tone will not be there (at least, not for a dog I think).
+
+Then, a practical choice will be a common emitter amplifier to drive a low-impedance speaker:
+
+<img src="./doc/npn.png" alt="npn" width="200px">
 
 # Appendixes
 
@@ -229,41 +247,16 @@ The MML dialect implemented supports multi-voice: each voice can be specified on
 | `ws`, `ww`, `wt` (*) | Sets the square waveform, sawtooth waveform or triangle waveform for the current instrument.
 | `\|` | The pipe character, used in music sheet notation to help aligning different channel, is ignored.
 | `#`, `;` | Characters to denote comment lines: it will skip the rest of the line.
+| `&` | Bind two consecutive notes of the same frequency, but different duration, to a single note.
 | `A-Z` (*) | Sets the active voice for the current MML line. Multiple characters can be specified: in that case all the selected voices will receive the MML commands until the end of the line.
 
 (*) custom MML dialect.
 
 The MML compiler is not optimized to run on a microcontroller (it requires dynamic memory allocation), but to be run on a PC in order to obtain the data to create a binary stream for the sequencer. The typical usage is a compiler for PC.
 
-### Typical usage
+# Compiling
 
-The MML file should be loaded entirely in memory to be compiled. 
-
-```c
-// Set the error handler in order to show errors and line/col counts
-mml_set_error_handler(stderr_err_handler);
-struct seq_frame_map_t map;
-// Parse the MML file and produce sequencer frames as stream.
-if (mml_compile(mml_content, &map)) {
-    // Error
-}
-// Compile the channel data map in a stream
-struct seq_frame_t* frame_stream;
-int frame_count;
-int voice_count;
-seq_compile(&map, &frame_stream, &frame_count, &voice_count);
-
-// Save the frame stream...
-
-// Free memory
-mml_free(map);
-seq_free(frame_stream);
-```
-
-Compiling
------
-
-### PIC12F683 port
+## PIC12/PIC16 port
 
 You need the latest version of [MPLAB IDE](https://www.microchip.com/en-us/development-tools-tools-and-software/mplab-x-ide) to build for the Microchip MCU.
 
@@ -271,17 +264,15 @@ The project is optimized to be built even with the __free version__ of the [XC8 
 
 The tune is stored in the rest of the program memory left, packed in a stream of bits in order to squeeze the MCU to the max.
 
-### PC port (`pc`)
+But you need first to compile and launch the PC port.
+
+## PC port (`pc`)
 
 This uses `libao` and a command line interface to simulate the output of
 the synthesizer and to output a `.wav` file.  It was used to debug the synthesizer.
 
-The PC port can be used to compile MML tunes to the sequencer binary format:
+The PC port must be used to compile MML tunes to the `tune_gen.c`/`tune_gen.h` source files:
 
-* `compile-mml FILE.mml` compiles the .mml file and produces a `sequencer.bin` output
-
-and to play sequencer files as well:
-
-* `sequencer FILE.bin` loads and plays the sequencer binary file passed as input.
+* `compile-mml FILE.mml` compiles the .mml file and produces the `tune_gen.c`/`tune_gen.h` output in the current folder. In addition, it creates the `out.wav` for offline playback and waveform analysis.
 
 
