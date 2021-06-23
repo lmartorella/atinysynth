@@ -251,7 +251,11 @@ Then, a practical choice will be a common emitter amplifier to drive a low-imped
 
 <img src="./doc/npn.png" alt="npn" width="200px">
 
-(This basic configuration drains power even when the signal is mute... resembling a class-A amplifier).
+_This basic configuration drains power even when the signal is mute... resembling a class-A amplifier_
+
+<img src="./doc/proto.jpg" alt="proto pcb" width="300px">
+
+_Very loud prototype_
 
 # Appendixes
 
@@ -288,7 +292,7 @@ The MML compiler is not optimized to run on a microcontroller (it requires dynam
 
 ## PIC12/PIC16 port
 
-You need the latest version of [MPLAB IDE](https://www.microchip.com/en-us/development-tools-tools-and-software/mplab-x-ide) to build for the Microchip MCU.
+You need the latest version of [MPLAB X IDE](https://www.microchip.com/en-us/development-tools-tools-and-software/mplab-x-ide) to build for the Microchip MCU.
 
 The project is optimized to be built even with the __free version__ of the [XC8 compiler](https://www.microchip.com/en-us/development-tools-tools-and-software/mplab-xc-compilers). Obviously using the PRO version you will be able to pack more tune data in the EEPROM.
 
