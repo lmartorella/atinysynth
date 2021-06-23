@@ -239,7 +239,7 @@ int stream_compress(struct seq_frame_t* frame_stream, int frame_count, struct bi
 
 	int bits_per_frame = dist_adsr_time_scale.refs.bit_count + dist_wf_period.refs.bit_count + dist_wf_amplitude.refs.bit_count + dist_adsr_release_start.refs.bit_count;
 	// The last frame data will be all 0s
-	stream->data_size = (int)ceil((frame_count + 1) * bits_per_frame / 8.0);
+	stream->data_size = (int)ceil((frame_count + 2) * bits_per_frame / 8.0);
 	printf("Stream size: %d bytes\n", stream->data_size);
 
 	// +1 again for the write_bits rounding
@@ -259,10 +259,12 @@ int stream_compress(struct seq_frame_t* frame_stream, int frame_count, struct bi
 	}
 
 	// EOF. The risk is that a valid note close to the stream end has all refs = 0. However this is only a filler to be discarded when the pointer reaches the end
-	write_bits(&stream_writer, 0, dist_adsr_time_scale.refs.bit_count);
-	write_bits(&stream_writer, 0, dist_wf_period.refs.bit_count);
-	write_bits(&stream_writer, 0, dist_wf_amplitude.refs.bit_count);
-	write_bits(&stream_writer, 0, dist_adsr_release_start.refs.bit_count);
+	for (int i = 0; i < 2; i++) {
+		write_bits(&stream_writer, 0, dist_adsr_time_scale.refs.bit_count);
+		write_bits(&stream_writer, 0, dist_wf_period.refs.bit_count);
+		write_bits(&stream_writer, 0, dist_wf_amplitude.refs.bit_count);
+		write_bits(&stream_writer, 0, dist_adsr_release_start.refs.bit_count);
+	}
 
 	return 0;
 }

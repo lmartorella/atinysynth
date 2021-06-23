@@ -49,7 +49,7 @@ void new_frame_require() {
 	uint8_t ref_adsr_release_start = read_bits(BITS_ADSR_RELEASE_START) & ((1 << BITS_ADSR_RELEASE_START) - 1);
 #endif
 
-	if (tune_ptr >= tune_ptr_end
+	if (tune_ptr >= (tune_ptr_end - 1)
 #if BITS_ADSR_TIME_SCALE > 0
             && !ref_adsr_time_scale
 #endif
@@ -88,83 +88,68 @@ void new_frame_require() {
 	}
 }
 
-// Creates a SYNTH_FREQ / 4 square wave
-static void test_freq() {
-    // Wait for next sampling op
-    while (1) {
-        while (!INTCONbits.T0IF);
-        INTCONbits.T0IF = 0;
-        while (!INTCONbits.T0IF);
-        INTCONbits.T0IF = 0;
-
-        CCPR1L = 16 >> 2;
-        CCP1CONbits.DC1B = 0;
-
-        while (!INTCONbits.T0IF);
-        INTCONbits.T0IF = 0;
-        while (!INTCONbits.T0IF);
-        INTCONbits.T0IF = 0;
-
-        CCPR1L = 112 >> 2;
-        CCP1CONbits.DC1B = 0;
-    }
-}
-
 void main() {
-    // Set HS 20Mhz
-    OSCCONbits.SCS = 0;
-    
-    // Set-up PWM
-    // Timer prescaler to 1 and PR2 = 0x19 = 76kHZ and 6 bits of resolution @8MHz
-
-    // Disable output
-    TRISIObits.TRISIO2 = 1;
-    
-    // Timer 2
-    T2CONbits.T2CKPS = 0; // 1:1 prescaler
-    T2CONbits.TMR2ON = 1; // ON
-    // Period = 20Mhz / (4 * (PR2 + 1)) / prescaler = 19.53kHZ
-    // Duty cycle = CCP / (4 * (PR2 + 1)). Max is 1024 (10-bit)
-    // Very close to hearing range, but this allow the upper 8-bit MSB to
-    // be pushed in CCPR1L without bit shifts. The speakers will cut it.
-    PR2 = 0xff; 
-    
-    // PWM, active high
-    CCP1CONbits.CCP1M = 0xC;
-
-    // Setup Timer0 for FREQ (20MHz -> 5MHz Fosc/4)
-    OPTION_REGbits.PSA = 0; // prescaler 
-    OPTION_REGbits.PS = 0;  // prescaler 1:2 => 9766
-    OPTION_REGbits.T0CS = 0; // Fosc
-    
-    // Enable PWM output
-    TRISIObits.TRISIO2 = 0;
-    CCP1CONbits.DC1B = 0;
-    
-    // Now CCPR1L:CCP1CONbits.DC1B is 7-bits 
-    //test_freq();
-
     while (1) {
-        tune_ptr = tune_data;
-        tune_ptr_end = tune_data + TUNE_DATA_SIZE - 1;
-        tune_ptr_bits = 0;
-        seq_end = 0;
-        cur_voice = &synth.voice[0];
-        for (uint8_t i = 0; i < VOICE_COUNT; i++, cur_voice++) {
-            cur_voice->adsr.state_counter = 0;
-        }
-        
-        seq_play_stream(SEQ_CHANNEL_COUNT);
+        // Set HS 20Mhz
+        OSCCONbits.SCS = 0;
 
-        while (!seq_end) {
-            
-            // From +128 to -128
-            CCPR1L = (uint8_t)(seq_feed_synth()) + 128;            
-            
-            // Wait for next sampling op
-            while (!INTCONbits.T0IF);
-            INTCONbits.T0IF = 0;
+        // Set-up PWM
+        // Timer prescaler to 1 and PR2 = 0x19 = 76kHZ and 6 bits of resolution @8MHz
+
+        // Disable output
+        TRISIObits.TRISIO2 = 1;
+
+        // Timer 2
+        T2CONbits.T2CKPS = 0; // 1:1 prescaler
+        T2CONbits.TMR2ON = 1; // ON
+        // Period = 20Mhz / (4 * (PR2 + 1)) / prescaler = 19.53kHZ
+        // Duty cycle = CCP / (4 * (PR2 + 1)). Max is 1024 (10-bit)
+        // Very close to hearing range, but this allow the upper 8-bit MSB to
+        // be pushed in CCPR1L without bit shifts. The speakers will cut it.
+        PR2 = 0xff; 
+
+        // PWM, active high
+        CCP1CONbits.CCP1M = 0xC;
+
+        // Setup Timer0 for FREQ (20MHz -> 5MHz Fosc/4)
+        OPTION_REGbits.PSA = 0; // prescaler 
+        OPTION_REGbits.PS = 0;  // prescaler 1:2 => 9766
+        OPTION_REGbits.T0CS = 0; // Fosc
+
+        // Enable PWM output
+        TRISIObits.TRISIO2 = 0;
+        CCP1CONbits.DC1B = 0;
+
+        for (uint8_t count = 3; count; count--) {
+            tune_ptr = tune_data;
+            tune_ptr_end = tune_data + TUNE_DATA_SIZE - 1;
+            tune_ptr_bits = 0;
+            seq_end = 0;
+            cur_voice = &synth.voice[0];
+            for (uint8_t i = 0; i < VOICE_COUNT; i++, cur_voice++) {
+                cur_voice->adsr.state_counter = 0;
+            }
+
+            seq_play_stream(SEQ_CHANNEL_COUNT);
+
+            while (!seq_end) {
+
+                // From +128 to -128
+                CCPR1L = (uint8_t)(seq_feed_synth()) + 128;            
+
+                // Wait for next sampling op
+                while (!INTCONbits.T0IF);
+                INTCONbits.T0IF = 0;
+            }
         }
+
+        // HALT PWM and set 0 to save battery
+        CCP1CONbits.CCP1M = 0x0;
+        TRISIObits.TRISIO2 = 0;
+        GPIObits.GP2 = 0;
+
+        // HALT CPU
+        SLEEP();
     }
 }
 

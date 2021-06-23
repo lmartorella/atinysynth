@@ -205,11 +205,39 @@ Distribution chart for 703 frames:
 Stream size: 1056 bytes
 ```
 
+Now the tune data is a byte array:
+
+```c
+const uint16_t tune_adsr_time_scale_refs[] = {
+	// ...
+};
+
+const uint16_t tune_wf_period_refs[] = {
+	// ...
+};
+
+const uint8_t tune_wf_amplitude_refs[] = {
+	// ...
+};
+
+const uint8_t tune_adsr_release_start_refs[] = {
+	// ...
+};
+
+// byte array..
+const uint8_t tune_data[TUNE_DATA_SIZE] = {
+	0x84, 0x44, 0xce, 0x10, 0x48, 0x0, 0xd, 0x58, 0x4e, 0xc4, 0x44, 0x4a, 0x11,
+	0x48, 0x0, 0xc5, [...]
+};
+```
+
+Phew, now the whole Korobeiniki tune (a.k.a Tetris A-type tune), with 3 voices, fits nicely side-by-side with the synthesizer code, in 2K words of EEPROM code memory.
+
 <img src="./doc/mem.png" alt="waveform" width="300px">
 
-And it uses only 72 bytes of RAM!
+And the whole build uses only 72 bytes of RAM!
 
-## PWM output
+## PWM output optimization
 
 Most recent PIC12/PIC16 MCUs has native support for PWM output, so the waveform output can be written with a single instruction.
 
@@ -222,6 +250,8 @@ This is not ideal in a Hi-Fi system, but it usually outside the audible spectrum
 Then, a practical choice will be a common emitter amplifier to drive a low-impedance speaker:
 
 <img src="./doc/npn.png" alt="npn" width="200px">
+
+(This basic configuration drains power even when the signal is mute... resembling a class-A amplifier).
 
 # Appendixes
 
